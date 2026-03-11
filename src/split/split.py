@@ -586,6 +586,8 @@ class SPLIT:
             print("Starting MCMC loop...")
 
             current_state = start_state
+            if resume:
+                burn = 0
 
             if burn > 0 and not resume:
                 print(f"Running burn-in steps...")
@@ -596,7 +598,7 @@ class SPLIT:
 
             for sample in sampler.sample(current_state, iterations=nsteps, progress=True, thin_by=thin_by):
             
-                if sampler.iteration % check_interval == 0:
+                if (sampler.iteration > 1) & (sampler.iteration % check_interval == 0):
 
                     update_diagnostic_plots(
                         sampler, diagnostics, Nblocks, self.emri['dt'], self.slice_length, 
