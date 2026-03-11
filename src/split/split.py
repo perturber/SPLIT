@@ -486,6 +486,7 @@ class SPLIT:
         except Exception as e:
             # start afresh if either of the above two conditions fail.
             resume = False
+            print(f"Resume run failed with Exception {e}")
             print(f"New chain initiated. File not found or empty. Creating: {new_filename}")
             backend = HDFBackend(new_filename)
         
@@ -589,7 +590,7 @@ class SPLIT:
 
             if burn > 0 and not resume:
                 print(f"Running burn-in steps...")
-                for sample in sampler.sample(current_state, iterations=burn, store=False, progress=True):
+                for sample in sampler.sample(current_state, iterations=burn, store=True, progress=True):
                     pass
                 current_state = sampler.get_last_sample()
                 sampler.reset()
