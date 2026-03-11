@@ -25,6 +25,7 @@ torchenv/
 # Ignore PBS/Slurm cluster output and error log files
 *.o[0-9]*
 *.e[0-9]*
+jobfile*
 
 # =========================
 # IDEs & Notebooks
