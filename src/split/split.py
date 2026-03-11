@@ -586,8 +586,6 @@ class SPLIT:
             print("Starting MCMC loop...")
 
             current_state = start_state
-            if resume:
-                burn = 0
 
             if burn > 0 and not resume:
                 print(f"Running burn-in steps...")
