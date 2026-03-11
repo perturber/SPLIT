@@ -1,17 +1,17 @@
 import multiprocessing as mp
 import os
-from .src.split import split
+from split import SPLIT
 
 if __name__ == '__main__':
     # Mandatory initialization for PyTorch/CUDA multiprocessing safety
     mp.set_start_method('spawn', force=True)
 
-    out_dir_root = "/scratch/e1101888/HILIS/Paper_Examples/" #must already exist
-    out_dir = os.path.join(out_dir_root, "Vanilla_EMRI_SemiCoherent_Outputs")
+    out_dir_root = "/scratch/e1101888/HILIS/Paper_Examples/Vanilla_EMRI" #must already exist
+    out_dir = os.path.join(out_dir_root, "SPLIT_Outputs")
     os.makedirs(out_dir, exist_ok=True)
 
     # Initialize the Orchestrator with the JSON configuration files
-    sampler_pipeline = split(
+    sampler_pipeline = SPLIT(
         emri_config_path="emri_config.json",
         sample_config_path="sample_config.json",
         out_dir=out_dir
