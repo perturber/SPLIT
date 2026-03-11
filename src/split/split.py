@@ -590,14 +590,15 @@ class SPLIT:
 
             if burn > 0 and not resume:
                 print(f"Running burn-in steps...")
-                for sample in sampler.sample(current_state, iterations=burn, store=True, progress=True):
+                for sample in sampler.sample(current_state, iterations=burn, store=False, progress=True):
                     pass
                 current_state = sampler.get_last_sample()
                 sampler.reset()
 
+            min_samples = 100 #keep separate from burn-in to please Eryn. 
             for sample in sampler.sample(current_state, iterations=nsteps, progress=True, thin_by=thin_by):
             
-                if (sampler.iteration > 1) & (sampler.iteration % check_interval == 0):
+                if (sampler.iteration > min_samples) & (sampler.iteration % check_interval == 0):
 
                     update_diagnostic_plots(
                         sampler, diagnostics, Nblocks, self.emri['dt'], self.slice_length, 
