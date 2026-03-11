@@ -1,0 +1,153 @@
+from eryn.moves import MHMove, RedBlueMove
+
+#define a global custom move class for the blocked Gibbs updates of the evolving parameters.
+class BlockedGibbsGaussianMove(MHMove):
+    def __init__(self, cov, prob_hyper=0.5,**kwargs):
+        """
+        Custom MHmove class for Blocked updates of the evolving parameters (leaves) and the hyper parameters (static branch).
+        cov (dict): keys: branch names values: covariance matrices for those branches of shape (ndim_branch, ndim_branch).
+        prob_hyper (float): probability that the hyper parameters will be updated (and not one of the source leaves)
+        """
+        self.cov_evolving = cov["evolving"]
+        self.cov_static = cov["static"]
+        self.prob_hyper = prob_hyper
+        super().__init__(**kwargs)
+
+    def get_proposal(self, branches_coords, random, branches_inds=None, **kwargs):
+        """
+        Generate the proposed state.
+        branches_coords: dict with keys as branch names.
+                         Values are (ntemps, nwalkers, nleaves_max, ndim)
+        """
+        q = {}
+
+        s_stat = self.xp.asarray(branches_coords["static"])
+        s_evol = self.xp.asarray(branches_coords["evolving"])
+
+        ntemps, nwalkers, nleaves, ndim_evolving = s_evol.shape
+
+        cov_stat_xp = self.xp.asarray(self.cov_static)
+        cov_evol_xp = self.xp.asarray(self.cov_evolving)
+
+        q = {"static": s_stat.copy(), "evolving": s_evol.copy()}
+
+        rng = random if not getattr(self, "use_gpu", False) else self.xp.random
+
+        #Randomly choose ONE branch to update
+        if random.uniform() < self.prob_hyper:
+            #update the hyper parameters (static branch).
+            # generate steps for the static branch shape: (ntemps, nwalkers, 1 leaf, ndim_static)
+            mean_stat = self.xp.zeros(len(self.cov_static))
+            static_step = rng.multivariate_normal(
+                mean_stat, cov_stat_xp, size=(ntemps, nwalkers, 1)
+            )
+            q["static"] += static_step
+
+        else:
+            #update ONE of the leaves (blocks) of the evolving branch.
+            # randomly choose a leaf (block) to update. This probability can also be weighted if needed. 
+            leaf_idx = random.choice(nleaves)
+
+            # generate step for the evolving branch for the chosen leaf of shape (ntemps, nwalkers, ndim_evolving)
+            mean_evol = self.xp.zeros(len(self.cov_evolving))
+            evolving_step = rng.multivariate_normal(
+                mean_evol, cov_evol_xp, size=(ntemps, nwalkers,)
+            )
+            q["evolving"][:, :, leaf_idx, :] += evolving_step
+
+        # symmetric proposal. log proposal ratio factor is 0
+        factors = self.xp.zeros((ntemps,nwalkers))
+
+        if getattr(self, "use_gpu", False) and not getattr(self, "return_gpu", False):
+            q["static"] = q["static"].get()
+            q["evolving"] = q["evolving"].get()
+            factors = factors.get()
+
+        return q, factors
+
+# similarly, define a blocked stretch move class 
+class BlockedStretchMove(RedBlueMove):
+    def __init__(self, a=2.0, prob_hyper=0.5, **kwargs):
+        """
+        Custom RedBlue move class for Blocked updates of the evolving parameters (leaves) and the hyper parameters (static branch).
+        StretchMove based on Goodman & Weare's affine-invariant move. Here, we adapt it for the multi-branch structure and blocked updates.
+        a (float): stretch move scale parameter
+        prob_hyper (float): probability that the hyper parameters will be updated (and not one of the source leaves) 
+        """
+        self.a = a
+        self.prob_hyper = prob_hyper
+        super().__init__(**kwargs)
+    
+    def get_proposal(self, s_all, c_all, random, **kwargs):
+        """
+        s_all (dict): Keys are ``branch_names`` and values are coordinates
+            for which a proposal is to be generated.
+        c_all (dict): Keys are ``branch_names`` and values are lists. These
+            lists contain all the complement array values.
+
+        Notes:
+            self.xp comes from the parent RedBlueMove class.    
+        """
+
+        #extract and concatenate the static branch coordinates
+        s_stat = self.xp.asarray(s_all["static"])
+        c_stat = self.xp.concatenate([self.xp.asarray(c) for c in c_all["static"]], axis=1)
+
+        #evolving branch
+        s_evol = self.xp.asarray(s_all["evolving"])
+        c_evol = self.xp.concatenate([self.xp.asarray(c) for c in c_all["evolving"]], axis=1)
+
+        ntemps, Ns = s_stat.shape[0], s_stat.shape[1]
+        Nc = c_stat.shape[1]
+
+        #Draw random complementary walkers
+        rint = random.randint(Nc, size=(ntemps, Ns))
+
+        #Draw the stretch scale variable z from the standard distribution
+        zz = ((self.a - 1.0) * random.rand(ntemps, Ns)+1.0) ** 2.0 / self.a
+
+        #cast zz to Cupy array natively using self.xp
+        zz = self.xp.asarray(zz)
+
+        #the symmetry factor for acceptance ratio
+        factors = self.xp.zeros((ntemps, Ns))
+
+        # copy the current state so untouched blocks remain identical
+        q = {"static": s_stat.copy(), "evolving": s_evol.copy()}
+
+        if random.uniform() < self.prob_hyper:
+            #update the static branch with stretch move
+            ndim = s_stat.shape[-1]
+            for t in range(ntemps):
+                for w in range(Ns):
+                    #get the complementary walker static parameters for this walker
+                    c_val = c_stat[t, rint[t, w], 0, :]
+                    #get the active walker static parameters for this walker
+                    s_val = s_stat[t, w, 0, :]
+                    #propose new static parameters by stretching along the line connecting s_val and c_val
+                    q["static"][t, w, 0, :] = c_val - zz[t,w] * (c_val - s_val)
+
+            #the factor scales by the dimensionality of the updated block
+            #this is important for detailed balance of the stretch move.
+            factors += (ndim - 1.0) * self.xp.log(zz)
+
+        else:
+            #update ONE of the evolving blocks with stretch move
+            nleaves = s_evol.shape[2]
+            ndim = s_evol.shape[-1]
+            leaf_idx = random.choice(nleaves) #uniform choice
+
+            for t in range(ntemps):
+                for w in range(Ns): 
+                    c_val = c_evol[t, rint[t, w], leaf_idx, :]
+                    s_val = s_evol[t, w, leaf_idx, :]
+                    q["evolving"][t, w, leaf_idx, :] = c_val - zz[t,w] * (c_val - s_val)
+
+            factors += (ndim - 1.0) * self.xp.log(zz)
+
+        if self.use_gpu and not getattr(self, "return_gpu", False):
+            q["static"] = q["static"].get()
+            q["evolving"] = q["evolving"].get()
+            factors = factors.get()
+
+        return q, factors

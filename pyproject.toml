@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "split"
+version = "0.0.1a"
+description = "Semi-Coherent EMRI Parameter Estimation on Multi-GPUs"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Shubham Kejriwal" }
+]
+dependencies = [
+    "numpy",
+    #"cupy",
+    "matplotlib",
+    "corner",
+    "tqdm",
+    "emcee",
+    "scipy",
+    #"eryn",
+    #"fastlisaresponse-cuda12x",
+    #"fastemriwaveforms-cuda12x",
+    #"lisaanalysistools-cuda12x",
+    #"stableemrifisher"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/perturber/SPLIT"

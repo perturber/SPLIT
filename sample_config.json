@@ -1,0 +1,30 @@
+{
+    "evolving_params": [
+        "p0", 
+        "e0", 
+        "Phi_phi0", 
+        "Phi_r0"
+    ],
+    "static_params": [
+        "m1", 
+        "m2", 
+        "a", 
+        "dist", 
+        "qS", 
+        "phiS", 
+        "qK", 
+        "phiK"
+    ],
+    "fixed_evolving": [
+        "xI0", 
+        "Phi_theta0"
+    ],
+    "nwalkers": 98,
+    "ntemps": 3,
+    "nsteps": 10000,
+    "check_interval": 100,
+    "burn": 100,
+    "thin_by": 1,
+    "old_filename": null,
+    "filename": "PART1.h5"
+}

@@ -1,0 +1,46 @@
+# =========================
+# Python & Package Builds
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+
+# =========================
+# Virtual Environments
+# =========================
+.env
+.venv
+env/
+venv/
+torchenv/
+
+# =========================
+# GPU & HPC Artifacts
+# =========================
+# Ignore CuPy compiled machine code to prevent lock conflicts
+*.cubin
+# Ignore PBS/Slurm cluster output and error log files
+*.o[0-9]*
+*.e[0-9]*
+
+# =========================
+# IDEs & Notebooks
+# =========================
+.vscode/
+.idea/
+.ipynb_checkpoints/
+
+# =========================
+# Project-Specific Outputs
+# =========================
+# Ignore all Eryn MCMC chain checkpoints
+*.h5
+
+# Ignore output directories defined in the scripts
+diagnostics/
+Kerr_StudenttLike_SemiCoherent_Output/
+Vanilla_EMRI_SemiCoherent_Outputs/
+*Output*/
