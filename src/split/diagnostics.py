@@ -1,11 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import emcee
-import tqdm
 import corner
 from few.utils.constants import YRSID_SI
 import os
-
 
 def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
                             ev_in_names, static_in_names, value_fixed_static, value_fixed_ev, 
@@ -103,7 +101,7 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
 
         projected_t0_samples = []
 
-        for j in tqdm(range(n_samples), desc="Backwards integration"):
+        for j in range(n_samples):
             for i in range(Nblocks):
                 T_backwards = (i * slice_length * dt) / YRSID_SI
 
