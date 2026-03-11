@@ -603,33 +603,44 @@ class SPLIT:
             
                 if (sampler.iteration > min_samples) & (sampler.iteration % check_interval == 0):
 
+                    min_autocorr_iters = 5 #minimum number of iterations (N = min_autocorr_iters * tau) for reliable tau calcs. 
+
                     update_diagnostic_plots(
                         sampler, diagnostics, Nblocks, self.emri['dt'], self.slice_length, 
                         self.samp['evolving_params'], self.samp['static_params'], value_fixed_static, value_fixed_ev,
                         indices_static_in, indices_ev_in, indices_static_fixed, indices_ev_fixed,
                         self.all_param_names, traj_indices, kerr_traj, 
-                        val_samp_ev=val_samp_ev, val_samp_st=val_samp_st
+                        val_samp_ev=val_samp_ev, val_samp_st=val_samp_st,
+                        min_autocorr_iters=min_autocorr_iters
                     )
 
                     chain_st = sampler.get_chain()["static"][:, 0, :, 0, :]
                     chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :]
                     
-                    try:
-                        tau_st = emcee.autocorr.integrated_time(chain_st, tol=0, quiet=True)
-                        reshaped_ev = chain_ev.transpose(0, 1, 2, 3).reshape(chain_ev.shape[0], nwalkers * Nblocks, -1)
-                        tau_ev = emcee.autocorr.integrated_time(reshaped_ev, tol=0, quiet=True)
-                        tau_est = max(np.max(tau_st), np.max(tau_ev))
-                    except emcee.autocorr.AutocorrError as e:
-                        tau_est = np.max(e.tau)
+                    #quiet = True ensures that an AutocorrError is not thrown if Niter too small for tau estimate.
+                    tau_st = emcee.autocorr.integrated_time(chain_st, tol=min_autocorr_iters, quiet=True)
+                    reshaped_ev = chain_ev.transpose(0, 1, 2, 3).reshape(chain_ev.shape[0], nwalkers * Nblocks, -1)
+                    tau_ev = emcee.autocorr.integrated_time(reshaped_ev, tol=min_autocorr_iters, quiet=True)
+                    tau_est = max(np.max(tau_st), np.max(tau_ev))
                         
                     r_hat_dict = sampler.backend.get_gelman_rubin_convergence_diagnostic(doprint=False)
                     r_hat_st = r_hat_dict["static"][0]   
                     r_hat_ev = r_hat_dict["evolving"][0] 
 
-                    converged_tau = sampler.iteration > (50 * tau_est)
+                    # In Blocked Gibbs Sampling, autocorrelation times can be longer. 
+                    # We use a relaxed criterion of N > 30 tau instead of 50 tau.
+                    converged_tau = sampler.iteration > (30 * tau_est)
                     converged_r = np.all(r_hat_st < 1.05) and np.all(r_hat_ev < 1.05)
 
                     ######### PRINT STATEMENTS ##############
+                    print("\n--- Sampler Status ---")
+                    print(f"Iteration: {sampler.iteration}")
+                    print(f"Max Gelman-Rubin (R-hat): Static = {np.max(r_hat_st):.4f}, Evolving = {np.max(r_hat_ev):.4f}")
+                    print(f"Estimated Autocorrelation Time (tau): {tau_est:.1f} steps")
+
+                    ess_per_walker = sampler.iteration / tau_est
+                    print(f"Effective Sample Size per walker: ~{ess_per_walker:.1f}")
+
                     print("\n--- Acceptance Fractions by Move ---")
                     for i, (move, weight) in enumerate(zip(sampler.moves, sampler.weights)):
                         # move.acceptance_fraction is an array of shape (ntemps, nwalkers)

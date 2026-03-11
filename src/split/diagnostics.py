@@ -9,7 +9,7 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
                             ev_in_names, static_in_names, value_fixed_static, value_fixed_ev, 
                             indices_static_in, indices_ev_in, indices_static_fixed, indices_ev_fixed,
                             pars_names, traj_indices, kerr_traj_instance,
-                            val_samp_ev, val_samp_st):
+                            val_samp_ev, val_samp_st, min_autocorr_iters):
     """Extract multi-branch chains, plot 1D walks, static posteriors, and t=0 projections.
     TODO:The input arguments list can probably be cleaned up."""
     print(f"\n[Step {sampler.iteration}] Generating diagnostic plots...")
@@ -59,30 +59,25 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
         taus_evolving = np.empty((len(N_steps), ndim_evolving))
 
         for idx, n in enumerate(N_steps):
-            try:
-                t_est_st = emcee.autocorr.integrated_time(chain_static[:n], tol=0, quiet=True)
-            except emcee.autocorr.AutocorrError as e:
-                t_est_st = e.tau
+            t_est_st = emcee.autocorr.integrated_time(chain_static[:n], tol=min_autocorr_iters, quiet=True)
             taus_static[idx] = t_est_st
 
-            try: 
-                reshaped_ev = chain_evolving[:n].transpose(0,1,2,3).reshape(n, nwalkers*Nblocks, ndim_evolving)
-                t_est_ev = emcee.autocorr.integrated_time(reshaped_ev, tol=0, quiet=True)
-            except emcee.autocorr.AutocorrError as e:
-                t_est_ev = e.tau
+            reshaped_ev = chain_evolving[:n].transpose(0,1,2,3).reshape(n, nwalkers*Nblocks, ndim_evolving)
+            t_est_ev = emcee.autocorr.integrated_time(reshaped_ev, tol=min_autocorr_iters, quiet=True)
             taus_evolving[idx] = t_est_ev
 
         fig_ac, (ax1, ax2) = plt.subplots(2,1, figsize=(8,10))
         for j in range(ndim_static):
             ax1.loglog(N_steps, taus_static[:,j], "b-", alpha=0.3)
-        ax1.loglog(N_steps, N_steps/50.0, "--r", label=r"$\tau = N/50$")
+        ax1.loglog(N_steps, N_steps/30.0, "--r", label=r"$\tau = N/30$")
         ax1.set_title("Autocorrelations: Static branch")
 
         for j in range(ndim_evolving):
             ax2.loglog(N_steps, taus_evolving[:,j], "g-", alpha=0.3)
-        ax2.loglog(N_steps, N_steps/50.0, "--r")
+        ax2.loglog(N_steps, N_steps/30.0, "--r")
         ax2.set_title("Autocorrelations (max across blocks): evolving branch")
 
+        ax1.legend()
         plt.savefig(f"{diagnostics_dir}/autocorr.png", bbox_inches='tight', dpi=300)
         plt.close(fig_ac)
 
