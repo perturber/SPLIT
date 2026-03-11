@@ -6,7 +6,7 @@ if __name__ == '__main__':
     # Mandatory initialization for PyTorch/CUDA multiprocessing safety
     mp.set_start_method('spawn', force=True)
 
-    out_dir_root = "/scratch/e1101888/HILIS/Paper_Examples/Vanilla_EMRI" #must already exist
+    out_dir_root = "." #must already exist
     out_dir = os.path.join(out_dir_root, "SPLIT_Outputs")
     os.makedirs(out_dir, exist_ok=True)
 
