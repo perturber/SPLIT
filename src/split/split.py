@@ -29,7 +29,7 @@ from lisatools.sensitivity import get_sensitivity, A1TDISens, E1TDISens
 from stableemrifisher.utils import tukey, generate_PSD, SNRcalc
 
 from .moves import BlockedGibbsGaussianMove, BlockedStretchMove
-from ..diagnostics import update_diagnostic_plots
+from .diagnostics import update_diagnostic_plots
 
 use_gpu = True
 
