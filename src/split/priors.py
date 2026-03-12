@@ -72,6 +72,9 @@ class MarkovStudenttPrior:
         
         self.traj = traj_instance
 
+        # Satisfy the Eryn gods
+        self.key_order = tuple()
+
     def logpdf(self, coords, inds, supps=None, branch_supps=None):
         """
         Evaluates the joint log-prior probability for the entire MCMC ensemble.
