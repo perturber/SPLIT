@@ -20,5 +20,14 @@
     "alpha_block": 0.05,
     "nu": 5,
     "fmin": null,
-    "fmax": null
+    "fmax": null,
+    "nu_prior": 5,
+    "sigma_prior": {
+            "p0": 1e-4,
+            "e0": 1e-5,
+            "xI0": 1e-5,
+            "Phi_phi0": 0.5,
+            "Phi_theta0": 0.5,
+            "Phi_r0": 0.5
+            }
 }

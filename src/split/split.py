@@ -28,8 +28,9 @@ from lisatools.sensitivity import get_sensitivity, A1TDISens, E1TDISens
 #utility tools from StableEMRIFisher
 from stableemrifisher.utils import tukey, generate_PSD, SNRcalc
 
-from .moves import BlockedGibbsGaussianMove, BlockedStretchMove
+from .moves import SequentialBlockedGibbsGaussianMove, BlockedStretchMove
 from .diagnostics import update_diagnostic_plots
+from .priors import MarkovStudenttPrior
 
 use_gpu = True
 
@@ -402,9 +403,36 @@ class SPLIT:
             if param in ['phiS','phiK']:
                 self.periodic["static"][idx] = 2*np.pi 
 
+        prob_dist_evolving = ProbDistContainer(priors_evolving)
+        prob_dist_static = ProbDistContainer(priors_static)
+
+        sigma_dict = self.emri.get(
+            'sigma_prior', 
+            {
+            "p0": 1e-4,
+            "e0": 1e-5,
+            "xI0": 1e-5,
+            "Phi_phi0": 0.5,
+            "Phi_theta0": 0.5,
+            "Phi_r0": 0.5
+            }
+        )
+
+        dt_block_years = (self.slice_length * self.emri['dt']) / YRSID_SI
+
         self.priors = {
-            "evolving": ProbDistContainer(priors_evolving),
-            "static": ProbDistContainer(priors_static)
+            "all_models_together": MarkovStudenttPrior(
+                prior_ev=prob_dist_evolving,
+                prior_st=prob_dist_static,
+                dt_block=dt_block_years,
+                nu=self.emri.get('nu_prior', 5.0),
+                sigma_dict=sigma_dict,
+                samp_config=self.samp,
+                emri_config=self.emri,
+                all_param_names=self.all_param_names,
+                true_evolving_dict=self.true_evolving_dict,
+                traj_instance=kerr_traj
+            )
         }
 
     def run_sampler(self):
@@ -468,6 +496,10 @@ class SPLIT:
         nleaves_max = {"evolving": Nblocks, "static": 1}
 
         # 3. Initialize Backend and Start State
+        # Extract true coordinates to act as the epicenter for the initial state
+        val_samp_st = np.array([self.true_pars[idx] for idx in indices_static_in])
+        val_samp_ev = np.column_stack([self.true_evolving_dict[name] for name in self.samp['evolving_params']])
+        
         try:
             if old_filename is not None:
                 # user provided an old filename, so we try to load it and resume from the last sample
@@ -489,10 +521,6 @@ class SPLIT:
             print(f"Resume run failed with Exception {e}")
             print(f"New chain initiated. File not found or empty. Creating: {new_filename}")
             backend = HDFBackend(new_filename)
-        
-            # Extract true coordinates to act as the epicenter for the initial state
-            val_samp_st = np.array([self.true_pars[idx] for idx in indices_static_in])
-            val_samp_ev = np.column_stack([self.true_evolving_dict[name] for name in self.samp['evolving_params']])
             
             jitter = 1e-4 #initial jitter for seeding walkers around true values
 
@@ -527,18 +555,18 @@ class SPLIT:
         
         #Blocked Gibbs sampling over individual leaves (Blocks). 
         # Our likelihood is independent across blocks (conditioned on the static parameters), so this is optimal.
+        custom_gibbs_move = SequentialBlockedGibbsGaussianMove(cov)
+
+        # We also use a Blocked Stretch move which also respects the multi-branch structure to ensure decent acceptance rate.
         # update the hyperparameters with probability 1/(Nblocks+1). 
         # This way, the probability of updating the hyper parameters and specific block parameters is balanced.
         # Each block (leaf) gets updated with probability (1-prob_hyper)/Nblocks.
-        custom_gibbs_move = BlockedGibbsGaussianMove(cov, prob_hyper=1.0/(Nblocks+1))
-
-        # We also use a Blocked Stretch move which also respects the multi-branch structure to ensure decent acceptance rate.
         custom_stretch_move = BlockedStretchMove(a=2.0, prob_hyper=1.0/(Nblocks+1))
 
         mixed_moves = [
-            (StretchMove(), 0.2), #for global exploration. Acceptance rate expected to be poor.
+            #(StretchMove(), 0.0), #for global exploration. Acceptance rate expected to be poor.
             (custom_stretch_move, 0.2), 
-            (custom_gibbs_move, 0.6)
+            (custom_gibbs_move, 0.8)
         ]
 
         # 5. Initialize Multi-GPU pool

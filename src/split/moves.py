@@ -151,3 +151,67 @@ class BlockedStretchMove(RedBlueMove):
             factors = factors.get()
 
         return q, factors
+    
+class SequentialBlockedGibbsGaussianMove(MHMove):
+    def __init__(self, cov, **kwargs):
+        """
+        Custom MHmove class for sequential updates of the
+        evolving parameters (leaves) and hyper parameters (static branch).
+        cov (dict): keys: branch names values: covariance matrices for those branches.
+        """
+        self.cov_evolving = cov["evolving"]
+        self.cov_static = cov["static"]
+
+        # Internal step counter to track the Gibbs sweep
+        self.step_counter = 0
+
+        super().__init__(**kwargs)
+
+    def get_proposal(self, branches_coords, random, branches_inds=None, **kwargs):
+        q = {}
+
+        s_stat = self.xp.asarray(branches_coords["static"])
+        s_evol = self.xp.asarray(branches_coords["evolving"])
+
+        ntemps, nwalkers, nleaves, ndim_evolving = s_evol.shape
+
+        cov_stat_xp = self.xp.asarray(self.cov_static)
+        cov_evol_xp = self.xp.asarray(self.cov_evolving)
+
+        q = {"static": s_stat.copy(), "evolving": s_evol.copy()}
+
+        rng = random if not getattr(self, "use_gpu", False) else self.xp.random
+
+        # Deterministic scheduling: 
+        # A full cucle is all N blocks + 1 static update
+        cycle_length = nleaves + 1
+        current_target = self.step_counter % cycle_length
+
+        if current_target == nleaves:
+            # Update the static parameters
+            mean_stat = self.xp.zeros(len(self.cov_static))
+            static_step = rng.multivariate_normal(
+                mean_stat, cov_stat_xp, size=(ntemps, nwalkers, 1)
+            )
+            q["static"] += static_step
+        else:
+            # Update the specific sequential leaf/Block
+            leaf_idx = current_target
+            mean_evol = self.xp.zeros(len(self.cov_evolving))
+            evolving_step = rng.multivariate_normal(
+                mean_evol, cov_evol_xp, size=(ntemps, nwalkers,)
+            )
+            q["evolving"][:, :, leaf_idx, :] += evolving_step
+
+        # Increment the step counter for the next call of this move
+        self.step_counter += 1
+
+        # symmetric proposal. log proposal ratio factor is 0
+        factors = self.xp.zeros((ntemps,nwalkers))
+
+        if getattr(self, "use_gpu", False) and not getattr(self, "return_gpu", False):
+            q["static"] = q["static"].get()
+            q["evolving"] = q["evolving"].get()
+            factors = factors.get()
+
+        return q, factors1
