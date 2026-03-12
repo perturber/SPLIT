@@ -609,7 +609,7 @@ class SPLIT:
                         sampler, diagnostics, Nblocks, self.emri['dt'], self.slice_length, 
                         self.samp['evolving_params'], self.samp['static_params'], value_fixed_static, value_fixed_ev,
                         indices_static_in, indices_ev_in, indices_static_fixed, indices_ev_fixed,
-                        self.all_param_names, traj_indices, kerr_traj, 
+                        self.all_param_names, self.true_pars, traj_indices, kerr_traj, 
                         val_samp_ev=val_samp_ev, val_samp_st=val_samp_st,
                         min_autocorr_iters=min_autocorr_iters
                     )

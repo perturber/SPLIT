@@ -8,7 +8,7 @@ import os
 def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
                             ev_in_names, static_in_names, value_fixed_static, value_fixed_ev, 
                             indices_static_in, indices_ev_in, indices_static_fixed, indices_ev_fixed,
-                            pars_names, traj_indices, kerr_traj_instance,
+                            pars_names, true_pars, traj_indices, kerr_traj_instance,
                             val_samp_ev, val_samp_st, min_autocorr_iters):
     """Extract multi-branch chains, plot 1D walks, static posteriors, and t=0 projections.
     TODO:The input arguments list can probably be cleaned up."""
@@ -21,8 +21,10 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
     current_nsteps, nwalkers, ndim_static = chain_static.shape
     ndim_evolving = chain_evolving.shape[-1]
 
+    discard_idx = int(current_nsteps * 0.1)
+
     # Plot A1: Static Corner Plot
-    flat_static = chain_static.reshape(-1, ndim_static)
+    flat_static = chain_static[discard_idx:].reshape(-1, ndim_static)
     try:
         fig_corner_st = corner.corner(flat_static, labels=static_in_names, truths=val_samp_st, show_titles=True)
         plt.savefig(f"{diagnostics_dir}/corner_static.png", bbox_inches='tight', dpi=300)
@@ -30,7 +32,7 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
     except ValueError as e:
         print(f" Skipping static corner plot: {e}")
 
-    # Plot A2: Static 1D walks
+    # Plot A2: Static 1D walks (includes burn-in)
     fig_1d_static, axs_static = plt.subplots(ndim_static, 1, figsize=(10, 3 * ndim_static))
     for j in range(ndim_static):
         axs_static[j].plot(chain_static[:,:,j], alpha=0.5)
@@ -40,17 +42,28 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
     plt.savefig(f"{diagnostics_dir}/1dplots_static.png", bbox_inches='tight', dpi=300)
     plt.close(fig_1d_static)
 
-    # Plot B: 1D walks per block for evolving parameters
+    # Plot B: 1D walks and corner plots per block for evolving parameters
     for i in range(Nblocks):
+        labels_ev_i = [f"{name}_{i}" for name in ev_in_names]
+        # --- 1D Walks ---
         fig_1d, axs = plt.subplots(ndim_evolving, 1, figsize=(10, 3 * ndim_evolving))
         for j in range(ndim_evolving):
             axs[j].plot(chain_evolving[:, :, i, j], alpha=0.5)
             axs[j].axhline(val_samp_ev[i,j], color='k', linestyle='--', label='True value')
-            axs[j].set_ylabel(f"{ev_in_names[j]}_{i}")
+            axs[j].set_ylabel(labels_ev_i[j])
 
         axs[-1].set_xlabel("Steps")
         plt.savefig(f"{diagnostics_dir}/1dplots_block_{i}.png", bbox_inches='tight', dpi=300)
         plt.close(fig_1d)
+
+        # --- Corner Plot ---
+        flat_ev_i = chain_evolving[discard_idx:, :, i, :].reshape(-1, ndim_evolving)
+        try:
+            fig_corner_ev = corner.corner(flat_ev_i, labels=labels_ev_i, truths=val_samp_ev[i], show_titles=True)
+            plt.savefig(f"{diagnostics_dir}/corner_evolving_{i}.png", bbox_inches='tight', dpi=300)
+            plt.close(fig_corner_ev)
+        except ValueError as e:
+            print(f"Skipping evolving corner plot for block {i}: {e}")
 
     # Plot C: Autocorrelation Convergence
     if current_nsteps > 100:
@@ -85,14 +98,15 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
     if current_nsteps > 100:
         print("Evolving samples backwards to t=0 for joint posterior...")
 
-        recent_static = chain_static[-500:].reshape(-1, ndim_static)
-        recent_evolving = chain_evolving[-500:].reshape(-1, Nblocks, ndim_evolving)
+        recent_static = chain_static[discard_idx:].reshape(-1, ndim_static)
+        recent_evolving = chain_evolving[discard_idx:].reshape(-1, Nblocks, ndim_evolving)
 
         n_samples = len(recent_static)
-        rand_idx = np.random.choice(len(recent_static), size=n_samples, replace=False)
+        
+        #rand_idx = np.random.choice(len(recent_static), size=n_samples, replace=False)
 
-        samp_st = recent_static[rand_idx]
-        samp_ev = recent_evolving[rand_idx]
+        samp_st = recent_static#[rand_idx]
+        samp_ev = recent_evolving#[rand_idx]
 
         projected_t0_samples = []
 
@@ -129,12 +143,13 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
                 except Exception:
                     continue
 
+        truths = true_pars[indices_static_in] + true_pars[indices_ev_in]
         projected_t0_samples = np.array(projected_t0_samples)
 
         if len(projected_t0_samples) > 0:
             labels_t0 = static_in_names + ev_in_names
             try:
-                fig_t0 = corner.corner(projected_t0_samples, labels=labels_t0)
+                fig_t0 = corner.corner(projected_t0_samples, labels=labels_t0, truths=truths, show_titles=True)
                 plt.savefig(f"{diagnostics_dir}/corner_t0_projected.png", bbox_inches='tight', dpi=300)
                 plt.close(fig_t0)
             except ValueError:
