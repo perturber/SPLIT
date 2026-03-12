@@ -111,6 +111,21 @@ class MarkovStudenttPrior:
         logP_ev = self.prior_ev.logpdf(evolving)
         logP_st = self.prior_st.logpdf(static)
 
+        ntemps, nwalkers, Nblocks, ndim_ev = evolving.shape
+        _, _, nleaves_st, ndim_st = static.shape
+
+        # Eryn's ProbDistContainer requires 2D arrays. 
+        # Flatten the first 3 dimensions into a single batch dimension.
+        ev_flat = evolving.reshape(-1, ndim_ev)
+        st_flat = static.reshape(-1, ndim_st)
+
+        logP_ev_flat = self.prior_ev.logpdf(ev_flat)
+        logP_st_flat = self.prior_st.logpdf(st_flat)
+
+        # Reshape the output log-probabilities back to their native 4D shapes
+        logP_ev = logP_ev_flat.reshape(ntemps, nwalkers, Nblocks, ndim_ev)
+        logP_st = logP_st_flat.reshape(ntemps, nwalkers, nleaves_st, ndim_st)
+
         logP_ev[~inds["evolving"]] = 0.0
         logP_st[~inds["static"]] = 0.0
 
