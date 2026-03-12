@@ -117,7 +117,7 @@ class MarkovStudenttPrior:
         total_logP = np.sum(logP_ev, axis=-1) + np.sum(logP_st, axis=-1)
 
         # if outside base bounds, return -inf
-        valid_mask = ~np.isinf(total_logp)
+        valid_mask = ~np.isinf(total_logP)
         if not np.any(valid_mask):
             return total_logP
         

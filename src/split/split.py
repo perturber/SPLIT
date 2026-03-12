@@ -421,6 +421,8 @@ class SPLIT:
         dt_block_years = (self.slice_length * self.emri['dt']) / YRSID_SI
 
         self.priors = {
+            "evolving": prob_dist_evolving,  # Required by HDFBackend
+            "static": prob_dist_static,      # Required by HDFBackend
             "all_models_together": MarkovStudenttPrior(
                 prior_ev=prob_dist_evolving,
                 prior_st=prob_dist_static,
