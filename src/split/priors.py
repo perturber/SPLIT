@@ -164,7 +164,7 @@ class MarkovStudenttPrior:
                         Phi_phi0=state_prev["Phi_phi0"], 
                         Phi_theta0=state_prev["Phi_theta0"], 
                         Phi_r0=state_prev["Phi_r0"],
-                        T=self.dt_block, dt = self.emri["dt"], upsample=True
+                        T=self.dt_block, #no upsampling to save time
                     )
                     expected = {
                         "p0": p[-1], "e0": e[-1], "xI0": x[-1],
