@@ -17,7 +17,7 @@
     "dt": 10.0,
     "desired_SNR": 50.0,
     "Nblocks": 5,
-    "alpha_block": 0.05,
+    "alpha_block": 0.02,
     "nu": 5,
     "fmin": null,
     "fmax": null,

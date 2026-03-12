@@ -143,7 +143,7 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
                 except Exception:
                     continue
 
-        truths = true_pars[indices_static_in] + true_pars[indices_ev_in]
+        truths = [true_pars[i] for i in indices_static_in] + [true_pars[i] for i in indices_ev_in]
         projected_t0_samples = np.array(projected_t0_samples)
 
         if len(projected_t0_samples) > 0:
