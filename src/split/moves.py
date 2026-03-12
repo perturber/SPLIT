@@ -214,4 +214,4 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
             q["evolving"] = q["evolving"].get()
             factors = factors.get()
 
-        return q, factors1
+        return q, factors
