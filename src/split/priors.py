@@ -119,9 +119,9 @@ class MarkovStudenttPrior:
         logP_ev_flat = self.prior_ev.logpdf(ev_flat)
         logP_st_flat = self.prior_st.logpdf(st_flat)
 
-        # Reshape the output log-probabilities back to their native 4D shapes
-        logP_ev = logP_ev_flat.reshape(ntemps, nwalkers, Nblocks, ndim_ev)
-        logP_st = logP_st_flat.reshape(ntemps, nwalkers, nleaves_st, ndim_st)
+        # Reshape the output log-probabilities back to their native shapes
+        logP_ev = logP_ev_flat.reshape(ntemps, nwalkers, Nblocks)
+        logP_st = logP_st_flat.reshape(ntemps, nwalkers, nleaves_st)
 
         logP_ev[~inds["evolving"]] = 0.0
         logP_st[~inds["static"]] = 0.0
@@ -133,7 +133,6 @@ class MarkovStudenttPrior:
         if not np.any(valid_mask):
             return total_logP
         
-        Nblocks = evolving.shape[2]
         valid_indices = np.argwhere(valid_mask)
         penalty = np.zeros_like(total_logP)
 
