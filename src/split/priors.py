@@ -108,9 +108,6 @@ class MarkovStudenttPrior:
         evolving = coords["evolving"]
         static = coords["static"]
 
-        logP_ev = self.prior_ev.logpdf(evolving)
-        logP_st = self.prior_st.logpdf(static)
-
         ntemps, nwalkers, Nblocks, ndim_ev = evolving.shape
         _, _, nleaves_st, ndim_st = static.shape
 
