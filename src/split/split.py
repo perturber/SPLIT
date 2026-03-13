@@ -461,9 +461,6 @@ class SPLIT:
 
         # Set up folders
         folder = os.path.join(self.out_dir, f"nu_{nu}_Nblocks_{Nblocks}/")
-        diagnostics = os.path.join(folder, "diagnostics/")
-        os.makedirs(folder, exist_ok=True)
-        os.makedirs(diagnostics, exist_ok=True)
 
         # Parse MCMC setup variables
         nsteps = self.samp.get('nsteps', 10000)
@@ -478,6 +475,11 @@ class SPLIT:
         # Construct the full file paths (incorporating your exact naming convention)
         new_filename = folder + f"T_{T}_nwalkers_{nwalkers}_ntemps_{ntemps}_{new_file_input}"
         old_filename = folder + f"T_{T}_nwalkers_{nwalkers}_ntemps_{ntemps}_{old_file_input}" if old_file_input else None
+
+        #diagnostics folder always from new_filename
+        diagnostics = os.path.join(folder, f"diagnostics_{new_file_input}/")
+        os.makedirs(folder, exist_ok=True)
+        os.makedirs(diagnostics, exist_ok=True)
 
         # 2. Map JSON string names to numeric indices for likelihood function
         indices_ev_in = [self.all_param_names.index(name) for name in self.samp['evolving_params']]
