@@ -215,3 +215,86 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
             factors = factors.get()
 
         return q, factors
+    
+class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
+    def __init__(self, mode_factor=None, reg=1e-9, **kwargs):
+        """
+        Custom RedBlueMove class for sequential adaptive updates of the
+        evolving parameters (leaves) and hyper parameters (static branch).
+        
+        mode_factor (float): Scaling factor for the covariance. Defaults to the 
+                             mathematically optimal (2.38^2 / d) for Random Walk.
+        reg (float): Small regularizer added to the diagonal to prevent matrix 
+                     collapse during the very early burn-in steps.
+        """
+        self.mode_factor = mode_factor
+        self.reg = reg
+        self.step_counter = 0
+        super().__init__(**kwargs)
+
+    def get_proposal(self, s, c, random, s_inds=None, c_inds=None, **kwargs):
+        q = {}
+
+        # s contains the ACTIVE walkers being moved
+        # c contains the STATIONARY complementary walkers (used to build the covariance)
+        s_stat = self.xp.asarray(s["static"])
+        s_evol = self.xp.asarray(s["evolving"])
+        c_stat = self.xp.asarray(c["static"])
+        c_evol = self.xp.asarray(c["evolving"])
+
+        ntemps, nactive, nleaves, ndim_evol = s_evol.shape
+        _, _, _, ndim_stat = s_stat.shape
+
+        q = {"static": s_stat.copy(), "evolving": s_evol.copy()}
+        rng = random if not getattr(self, "use_gpu", False) else self.xp.random
+
+        # Deterministic scheduling: N blocks + 1 static update
+        cycle_length = nleaves + 1
+        
+        # RedBlueMove calls get_proposal TWICE per full ensemble sweep. 
+        # We use floor division (// 2) to ensure both halves of the ensemble 
+        # update the exact same block before moving to the next one!
+        current_target = (self.step_counter // 2) % cycle_length
+
+        factors = self.xp.zeros((ntemps, nactive))
+
+        if current_target == nleaves:
+            # ---------------- STATIC UPDATE ----------------
+            scale = self.mode_factor if self.mode_factor is not None else (2.38 ** 2) / ndim_stat
+            x_c = c_stat[:, :, 0, :] # Extract complementary walkers
+            
+            for t in range(ntemps):
+                # 1. Calculate the empirical covariance of the COMPLEMENTARY walkers
+                cov_t = self.xp.cov(x_c[t], rowvar=False) 
+                # 2. Add regularization and optimally scale the jump
+                cov_t = cov_t * scale + self.xp.eye(ndim_stat) * self.reg
+                
+                mean_stat = self.xp.zeros(ndim_stat)
+                static_step = rng.multivariate_normal(mean_stat, cov_t, size=nactive)
+                q["static"][t, :, 0, :] += static_step
+
+        else:
+            # ---------------- EVOLVING UPDATE ----------------
+            leaf_idx = current_target
+            scale = self.mode_factor if self.mode_factor is not None else (2.38 ** 2) / ndim_evol
+            x_c = c_evol[:, :, leaf_idx, :]
+            
+            for t in range(ntemps):
+                # 1. Calculate the empirical covariance of the COMPLEMENTARY walkers for this block
+                cov_t = self.xp.cov(x_c[t], rowvar=False)
+                # 2. Add regularization and optimally scale the jump
+                cov_t = cov_t * scale + self.xp.eye(ndim_evol) * self.reg
+                
+                mean_evol = self.xp.zeros(ndim_evol)
+                evolving_step = rng.multivariate_normal(mean_evol, cov_t, size=nactive)
+                q["evolving"][t, :, leaf_idx, :] += evolving_step
+
+        # Increment the step counter for the next half-sweep
+        self.step_counter += 1
+
+        if getattr(self, "use_gpu", False) and not getattr(self, "return_gpu", False):
+            q["static"] = q["static"].get()
+            q["evolving"] = q["evolving"].get()
+            factors = factors.get()
+
+        return q, factors

@@ -28,7 +28,7 @@ from lisatools.sensitivity import get_sensitivity, A1TDISens, E1TDISens
 #utility tools from StableEMRIFisher
 from stableemrifisher.utils import tukey, generate_PSD, SNRcalc
 
-from .moves import SequentialBlockedGibbsGaussianMove, BlockedStretchMove
+from .moves import SequentialAdaptiveBlockedGibbsGaussianMove, BlockedStretchMove
 from .diagnostics import update_diagnostic_plots
 from .priors import MarkovStudenttPrior
 from .utils import compute_rhat
@@ -553,14 +553,15 @@ class SPLIT:
             start_state = State({"evolving": coords_evolving, "static": coords_static})
 
         # 4. Set up MCMC Architecture and Backend
-        cov = {
-            "evolving": np.diag(np.ones(ndim_evolving)) * 1e-9,
-            "static": np.diag(np.ones(ndim_static)) * 1e-9,
-        }
+        #cov = {
+        #    "evolving": np.diag(np.ones(ndim_evolving)) * 1e-9,
+        #    "static": np.diag(np.ones(ndim_static)) * 1e-9,
+        #}
         
-        #Blocked Gibbs sampling over individual leaves (Blocks). 
+        # Blocked Gibbs sampling over individual leaves (Blocks). 
+        # The covariance matrix for Gaussian kernel is adaptively modified. 
         # Our likelihood is independent across blocks (conditioned on the static parameters), so this is optimal.
-        custom_gibbs_move = SequentialBlockedGibbsGaussianMove(cov)
+        custom_gibbs_move = SequentialAdaptiveBlockedGibbsGaussianMove(reg=1e-9)
 
         # We also use a Blocked Stretch move which also respects the multi-branch structure to ensure decent acceptance rate.
         # update the hyperparameters with probability 1/(Nblocks+1). 
