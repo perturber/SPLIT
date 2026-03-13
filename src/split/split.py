@@ -570,9 +570,9 @@ class SPLIT:
         custom_stretch_move = BlockedStretchMove(a=2.0, prob_hyper=1.0/(Nblocks+1))
 
         mixed_moves = [
-            #(StretchMove(), 0.0), #for global exploration. Acceptance rate expected to be poor.
+            (StretchMove(), 0.2), #for global exploration. Acceptance rate expected to be poor.
             (custom_stretch_move, 0.2), 
-            (custom_gibbs_move, 0.8)
+            (custom_gibbs_move, 0.6)
         ]
 
         # 5. Initialize Multi-GPU pool
