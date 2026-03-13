@@ -73,7 +73,7 @@ class MarkovStudenttPrior:
         self.traj = traj_instance
 
         # Satisfy the Eryn gods
-        self.key_order = tuple()
+        self.key_order = ["custom_prior_override"]
 
     def logpdf(self, coords, inds, supps=None, branch_supps=None):
         """
