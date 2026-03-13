@@ -1,4 +1,6 @@
 from eryn.moves import MHMove, RedBlueMove
+import numpy as np
+import cupy as cp
 
 #define a global custom move class for the blocked Gibbs updates of the evolving parameters.
 class BlockedGibbsGaussianMove(MHMove):
@@ -233,6 +235,9 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
         super().__init__(**kwargs)
 
     def get_proposal(self, s, c, random, s_inds=None, c_inds=None, **kwargs):
+        use_gpu = getattr(self, "use_gpu", False)
+        self.xp = cp if use_gpu else np
+
         q = {}
 
         # s contains the ACTIVE walkers being moved
@@ -286,7 +291,7 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
                 cov_t = cov_t * scale + self.xp.eye(ndim_evol) * self.reg
                 
                 mean_evol = self.xp.zeros(ndim_evol)
-                evolving_step = rng.multivariate_normal(mean_evol, cov_t, size=nactive)
+                evolving_step = rng.multivariate_normal(mean_evol, cov_t, size=nactive, method='eigh')
                 q["evolving"][t, :, leaf_idx, :] += evolving_step
 
         # Increment the step counter for the next half-sweep
