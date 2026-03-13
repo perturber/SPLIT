@@ -646,17 +646,38 @@ class SPLIT:
                     
                     #quiet = True ensures that an AutocorrError is not thrown if Niter too small for tau estimate.
                     tau_st = emcee.autocorr.integrated_time(chain_st, tol=min_autocorr_iters, quiet=True)
-                    reshaped_ev = chain_ev.transpose(0, 1, 2, 3).reshape(chain_ev.shape[0], nwalkers * Nblocks, -1)
-                    tau_ev = emcee.autocorr.integrated_time(reshaped_ev, tol=min_autocorr_iters, quiet=True)
-                    tau_est = max(np.max(tau_st), np.max(tau_ev))
-                        
-                    r_hat_dict = sampler.backend.get_gelman_rubin_convergence_diagnostic(doprint=False)
-                    r_hat_st = r_hat_dict["static"][0]   
-                    r_hat_ev = r_hat_dict["evolving"][0] 
+                    # Calculate tau for each block independently!
+                    tau_ev_blocks = []
+                    for i in range(Nblocks):
+                        tau_b = emcee.autocorr.integrated_time(chain_ev[:, :, i, :], tol=min_autocorr_iters, quiet=True)
+                        tau_ev_blocks.append(tau_b)
+                    tau_ev = np.array(tau_ev_blocks)
 
-                    # In Blocked Gibbs Sampling, autocorrelation times can be longer. 
+                    tau_est = max(np.nanmax(tau_st), np.nanmax(tau_ev))
+                    
+                    def compute_rhat(x):
+                        # x shape expected: (nsteps, nwalkers, ndim)
+                        n, m = x.shape[0], x.shape[1]
+                        if n < 2: 
+                            return np.full(x.shape[-1], np.inf)
+                        mean_chain = np.mean(x, axis=0)
+                        mean_all = np.mean(mean_chain, axis=0)
+                        
+                        B = n / (m - 1) * np.sum((mean_chain - mean_all)**2, axis=0)
+                        W = 1 / (m * (n - 1)) * np.sum((x - mean_chain)**2, axis=(0, 1))
+                        
+                        # Prevent division by zero if a parameter hasn't moved yet
+                        W = np.where(W == 0, 1e-10, W) 
+                        
+                        var_plus = ((n - 1) / n) * W + B / n
+                        return np.sqrt(var_plus / W)
+                    
+                    r_hat_st = compute_rhat(chain_st)
+                    r_hat_ev = np.array([compute_rhat(chain_ev[:, :, i, :]) for i in range(Nblocks)])
+
+                    #convergence criterion.
                     converged_tau = sampler.iteration > (50 * tau_est)
-                    converged_r = np.all(r_hat_st < 1.05) and np.all(r_hat_ev < 1.05)
+                    converged_r = np.all(np.nanmax(r_hat_st) < 1.05) and np.all(np.nanmax(r_hat_ev) < 1.05)
 
                     ######### PRINT STATEMENTS ##############
                     print("\n--- Sampler Status ---")
