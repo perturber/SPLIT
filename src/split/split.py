@@ -562,14 +562,16 @@ class SPLIT:
         mixed_moves = []
 
         if moves_dict.get("GlobalStretch", 0.0) > 0.0:
+            # a global stretch move across all model parameters
             mixed_moves.append((StretchMove(), moves_dict["GlobalStretch"]))
         
         if moves_dict.get("BlockStretch", 0.0) > 0.0:
+            # block-wise sequential stretch move
             custom_stretch_move = SequentialBlockedStretchMove(a=2.0)
             mixed_moves.append((custom_stretch_move, moves_dict["BlockStretch"]))
 
         if moves_dict.get("BlockGaussian", 0.0) > 0.0:
-            # Blocked Gibbs sampling over individual leaves (Blocks). 
+            # block-wise sequential Gaussian move
             # The covariance matrix for Gaussian kernel is adaptively modified. 
             custom_gibbs_move = SequentialAdaptiveBlockedGibbsGaussianMove(reg=1e-9)
             mixed_moves.append((custom_gibbs_move, moves_dict["BlockGaussian"]))
