@@ -477,7 +477,7 @@ class SPLIT:
         old_filename = folder + f"T_{T}_nwalkers_{nwalkers}_ntemps_{ntemps}_{old_file_input}" if old_file_input else None
 
         #diagnostics folder always from new_filename
-        diagnostics = os.path.join(folder, f"diagnostics_{new_file_input}/")
+        diagnostics = os.path.join(folder, f"diagnostics_{new_filename}/")
         os.makedirs(folder, exist_ok=True)
         os.makedirs(diagnostics, exist_ok=True)
 
