@@ -20,13 +20,13 @@
         "Phi_theta0"
     ],
     "moves": {
-        "GlobalStretch": 0.2,
-        "BlockStretch": 0.2,
-        "BlockGaussian": 0.6
+        "GlobalStretch": 0.0,
+        "BlockStretch": 0.5,
+        "BlockGaussian": 0.5
     },
     "nwalkers": 98,
     "ntemps": 3,
-    "nsteps": 10000,
+    "nsteps": 100000,
     "check_interval": 100,
     "burn": 100,
     "thin_by": 1,

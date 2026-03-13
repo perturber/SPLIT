@@ -2,7 +2,7 @@ from eryn.moves import MHMove, RedBlueMove
 import numpy as np
 import cupy as cp
 
-#define a global custom move class for the blocked Gibbs updates of the evolving parameters.
+#define a global custom move class for probabilistic blocked Gibbs updates of the evolving parameters.
 class BlockedGibbsGaussianMove(MHMove):
     def __init__(self, cov, prob_hyper=0.5,**kwargs):
         """
@@ -67,7 +67,7 @@ class BlockedGibbsGaussianMove(MHMove):
 
         return q, factors
 
-# similarly, define a blocked stretch move class 
+# similarly, define a probabilistic blocked stretch move class 
 class BlockedStretchMove(RedBlueMove):
     def __init__(self, a=2.0, prob_hyper=0.5, **kwargs):
         """
