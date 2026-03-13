@@ -624,10 +624,9 @@ class SPLIT:
                     pass
                 current_state = burn_state
 
-            min_samples = 100 #keep separate from burn-in to please Eryn. 
             for sample in sampler.sample(current_state, iterations=nsteps, progress=True, thin_by=thin_by):
             
-                if (sampler.iteration > min_samples) & (sampler.iteration % check_interval == 0):
+                if (sampler.iteration % check_interval == 0):
 
                     min_autocorr_iters = 5 #minimum number of iterations (N = min_autocorr_iters * tau) for reliable tau calcs. 
 
