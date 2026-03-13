@@ -658,8 +658,7 @@ class SPLIT:
                     r_hat_ev = r_hat_dict["evolving"][0] 
 
                     # In Blocked Gibbs Sampling, autocorrelation times can be longer. 
-                    # We use a relaxed criterion of N > 30 tau instead of 50 tau.
-                    converged_tau = sampler.iteration > (30 * tau_est)
+                    converged_tau = sampler.iteration > (50 * tau_est)
                     converged_r = np.all(r_hat_st < 1.05) and np.all(r_hat_ev < 1.05)
 
                     ######### PRINT STATEMENTS ##############
@@ -684,7 +683,7 @@ class SPLIT:
                     print(f"Global Mean Acceptance Fraction: {np.mean(global_acc_frac):.4f}\n")
                     #########################################
 
-                    if converged_tau and converged_r:
+                    if self.samp.get("check_converge", True) and (converged_tau and converged_r):
                         print(f"Convergence achieved at step {sampler.iteration}.")
                         break
 

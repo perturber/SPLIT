@@ -25,6 +25,7 @@
     "check_interval": 100,
     "burn": 100,
     "thin_by": 1,
+    "check_converge": true,
     "old_filename": null,
     "filename": "PART1.h5"
 }

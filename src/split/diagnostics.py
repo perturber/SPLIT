@@ -82,12 +82,12 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
         fig_ac, (ax1, ax2) = plt.subplots(2,1, figsize=(8,10))
         for j in range(ndim_static):
             ax1.loglog(N_steps, taus_static[:,j], "b-", alpha=0.3)
-        ax1.loglog(N_steps, N_steps/30.0, "--r", label=r"$\tau = N/30$")
+        ax1.loglog(N_steps, N_steps/50.0, "--r", label=r"$\tau = N/50$")
         ax1.set_title("Autocorrelations: Static branch")
 
         for j in range(ndim_evolving):
             ax2.loglog(N_steps, taus_evolving[:,j], "g-", alpha=0.3)
-        ax2.loglog(N_steps, N_steps/30.0, "--r")
+        ax2.loglog(N_steps, N_steps/50.0, "--r")
         ax2.set_title("Autocorrelations (max across blocks): evolving branch")
 
         ax1.legend()
