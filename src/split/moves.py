@@ -218,6 +218,91 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
 
         return q, factors
     
+class SequentialBlockedStretchMove(RedBlueMove):
+    def __init__(self, a=2.0, **kwargs):
+        """
+        Custom RedBlue move class for deterministic, sequential Blocked updates 
+        of the evolving parameters (leaves) and the hyper parameters (static branch).
+        
+        StretchMove is based on Goodman & Weare's affine-invariant move.
+        
+        a (float): stretch move scale parameter
+        """
+        self.a = a
+        self.step_counter = 0
+        super().__init__(**kwargs)
+    
+    def get_proposal(self, s, c, random, s_inds=None, c_inds=None, **kwargs):
+        use_gpu = getattr(self, "use_gpu", False)
+        xp = cp if use_gpu else np
+
+        q = {}
+
+        # s contains the ACTIVE walkers being moved
+        # c contains the STATIONARY complementary walkers
+        s_stat = xp.asarray(s["static"])
+        c_stat = xp.asarray(c["static"])
+        s_evol = xp.asarray(s["evolving"])
+        c_evol = xp.asarray(c["evolving"])
+
+        ntemps, nactive, nleaves, ndim_evol = s_evol.shape
+        _, ncomp, _, ndim_stat = c_stat.shape
+
+        q = {"static": s_stat.copy(), "evolving": s_evol.copy()}
+        rng = random if not use_gpu else xp.random
+
+        # Deterministic scheduling: N blocks + 1 static update
+        cycle_length = nleaves + 1
+        
+        # Ensure both halves of the RedBlue split update the exact same block
+        current_target = (self.step_counter // 2) % cycle_length
+
+        # Draw random complementary walkers for each active walker
+        rint = rng.randint(ncomp, size=(ntemps, nactive))
+
+        # Draw the stretch scale variable z from the standard distribution
+        zz = ((self.a - 1.0) * rng.rand(ntemps, nactive) + 1.0) ** 2.0 / self.a
+        factors = xp.zeros((ntemps, nactive))
+
+        # Setup advanced index for vectorization over temperatures
+        t_idx = xp.arange(ntemps)[:, None]
+
+        if current_target == nleaves:
+            # ---------------- STATIC UPDATE ----------------
+            # Extract values dynamically without slow nested for-loops
+            c_val = c_stat[t_idx, rint, 0, :]
+            s_val = s_stat[:, :, 0, :]
+            
+            # Expand dimensions to broadcast the scale factor across parameters
+            zz_expanded = zz[:, :, None]
+            
+            # Propose new static parameters
+            q["static"][:, :, 0, :] = c_val - zz_expanded * (c_val - s_val)
+            
+            # The factor scales by the dimensionality of the updated block
+            factors += (ndim_stat - 1.0) * xp.log(zz)
+
+        else:
+            # ---------------- EVOLVING UPDATE ----------------
+            leaf_idx = current_target
+            
+            c_val = c_evol[t_idx, rint, leaf_idx, :]
+            s_val = s_evol[:, :, leaf_idx, :]
+            zz_expanded = zz[:, :, None]
+            
+            q["evolving"][:, :, leaf_idx, :] = c_val - zz_expanded * (c_val - s_val)
+            factors += (ndim_evol - 1.0) * xp.log(zz)
+
+        # Increment the step counter for the next half-sweep
+        self.step_counter += 1
+
+        if use_gpu and not getattr(self, "return_gpu", False):
+            q["static"] = q["static"].get()
+            q["evolving"] = q["evolving"].get()
+            factors = factors.get()
+
+        return q, factors
+    
 class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
     def __init__(self, mode_factor=None, reg=1e-9, **kwargs):
         """

@@ -28,7 +28,7 @@ from lisatools.sensitivity import get_sensitivity, A1TDISens, E1TDISens
 #utility tools from StableEMRIFisher
 from stableemrifisher.utils import tukey, generate_PSD, SNRcalc
 
-from .moves import SequentialAdaptiveBlockedGibbsGaussianMove, BlockedStretchMove
+from .moves import SequentialAdaptiveBlockedGibbsGaussianMove, SequentialBlockedStretchMove
 from .diagnostics import update_diagnostic_plots
 from .priors import MarkovStudenttPrior
 from .utils import compute_rhat
@@ -553,27 +553,26 @@ class SPLIT:
             start_state = State({"evolving": coords_evolving, "static": coords_static})
 
         # 4. Set up MCMC Architecture and Backend
-        #cov = {
-        #    "evolving": np.diag(np.ones(ndim_evolving)) * 1e-9,
-        #    "static": np.diag(np.ones(ndim_static)) * 1e-9,
-        #}
+
+        moves_dict = self.samp.get("moves", {
+            "BlockStretch": 0.5,
+            "BlockGaussian": 0.5
+        })
+
+        mixed_moves = []
+
+        if moves_dict.get("GlobalStretch", 0.0) > 0.0:
+            mixed_moves.append((StretchMove(), moves_dict["GlobalStretch"]))
         
-        # Blocked Gibbs sampling over individual leaves (Blocks). 
-        # The covariance matrix for Gaussian kernel is adaptively modified. 
-        # Our likelihood is independent across blocks (conditioned on the static parameters), so this is optimal.
-        custom_gibbs_move = SequentialAdaptiveBlockedGibbsGaussianMove(reg=1e-9)
+        if moves_dict.get("BlockStretch", 0.0) > 0.0:
+            custom_stretch_move = SequentialBlockedStretchMove(a=2.0)
+            mixed_moves.append((custom_stretch_move, moves_dict["BlockStretch"]))
 
-        # We also use a Blocked Stretch move which also respects the multi-branch structure to ensure decent acceptance rate.
-        # update the hyperparameters with probability 1/(Nblocks+1). 
-        # This way, the probability of updating the hyper parameters and specific block parameters is balanced.
-        # Each block (leaf) gets updated with probability (1-prob_hyper)/Nblocks.
-        custom_stretch_move = BlockedStretchMove(a=2.0, prob_hyper=1.0/(Nblocks+1))
-
-        mixed_moves = [
-            (StretchMove(), 0.2), #for global exploration. Acceptance rate expected to be poor.
-            (custom_stretch_move, 0.2), 
-            (custom_gibbs_move, 0.6)
-        ]
+        if moves_dict.get("BlockGaussian", 0.0) > 0.0:
+            # Blocked Gibbs sampling over individual leaves (Blocks). 
+            # The covariance matrix for Gaussian kernel is adaptively modified. 
+            custom_gibbs_move = SequentialAdaptiveBlockedGibbsGaussianMove(reg=1e-9)
+            mixed_moves.append((custom_gibbs_move, moves_dict["BlockGaussian"]))
 
         # 5. Initialize Multi-GPU pool
         num_processes = cp.cuda.runtime.getDeviceCount() * 2
