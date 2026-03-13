@@ -31,6 +31,7 @@ from stableemrifisher.utils import tukey, generate_PSD, SNRcalc
 from .moves import SequentialBlockedGibbsGaussianMove, BlockedStretchMove
 from .diagnostics import update_diagnostic_plots
 from .priors import MarkovStudenttPrior
+from .utils import compute_rhat
 
 use_gpu = True
 
@@ -641,8 +642,9 @@ class SPLIT:
                         min_autocorr_iters=min_autocorr_iters
                     )
 
-                    chain_st = sampler.get_chain()["static"][:, 0, :, 0, :]
-                    chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :]
+                    # get the lowest temperature chains by setting axis=1 index to 0
+                    chain_st = sampler.get_chain()["static"][:, 0, :, 0, :] #chain_st has shape (nsteps, nwalkers, ndim)
+                    chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :] #chain_ev has shape (nsteps, nwalkers, Nblocks, ndim)
                     
                     #quiet = True ensures that an AutocorrError is not thrown if Niter too small for tau estimate.
                     tau_st = emcee.autocorr.integrated_time(chain_st, tol=min_autocorr_iters, quiet=True)
@@ -655,23 +657,6 @@ class SPLIT:
 
                     tau_est = max(np.nanmax(tau_st), np.nanmax(tau_ev))
                     
-                    def compute_rhat(x):
-                        # x shape expected: (nsteps, nwalkers, ndim)
-                        n, m = x.shape[0], x.shape[1]
-                        if n < 2: 
-                            return np.full(x.shape[-1], np.inf)
-                        mean_chain = np.mean(x, axis=0)
-                        mean_all = np.mean(mean_chain, axis=0)
-                        
-                        B = n / (m - 1) * np.sum((mean_chain - mean_all)**2, axis=0)
-                        W = 1 / (m * (n - 1)) * np.sum((x - mean_chain)**2, axis=(0, 1))
-                        
-                        # Prevent division by zero if a parameter hasn't moved yet
-                        W = np.where(W == 0, 1e-10, W) 
-                        
-                        var_plus = ((n - 1) / n) * W + B / n
-                        return np.sqrt(var_plus / W)
-                    
                     r_hat_st = compute_rhat(chain_st)
                     r_hat_ev = np.array([compute_rhat(chain_ev[:, :, i, :]) for i in range(Nblocks)])
 
@@ -682,7 +667,7 @@ class SPLIT:
                     ######### PRINT STATEMENTS ##############
                     print("\n--- Sampler Status ---")
                     print(f"Iteration: {sampler.iteration}")
-                    print(f"Max Gelman-Rubin (R-hat): Static = {np.max(r_hat_st):.4f}, Evolving = {np.max(r_hat_ev):.4f}")
+                    print(f"Max Gelman-Rubin (R-hat): Static = {np.nanmax(r_hat_st):.4f}, Evolving = {np.nanmax(r_hat_ev):.4f}")
                     print(f"Estimated Autocorrelation Time (tau): {tau_est:.1f} steps")
 
                     ess_per_walker = sampler.iteration / tau_est
