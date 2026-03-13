@@ -453,7 +453,7 @@ class SPLIT:
         print("Initializing sampler...")
 
         # 1. Directory and File Management (Using your exact structure)
-        nu = self.emri.get('nu', 5)
+        nu = self.emri.get('nu_like', 5)
         Nblocks = self.emri['Nblocks']
         T = self.emri['T']
         nwalkers = self.samp['nwalkers']
@@ -603,7 +603,7 @@ class SPLIT:
                     indices_ev_in=indices_ev_in, indices_static_in=indices_static_in, 
                     indices_ev_fixed=indices_ev_fixed, indices_static_fixed=indices_static_fixed, 
                     value_fixed_static=value_fixed_static, value_fixed_ev=value_fixed_ev, 
-                    nu=self.emri['nu']
+                    nu=self.emri['nu_like']
                 ),
                 moves=mixed_moves,
                 tempering_kwargs=dict(ntemps=ntemps, adaptive=True, stop_adaptation=2000, permute=True),

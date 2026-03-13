@@ -18,10 +18,10 @@
     "desired_SNR": 50.0,
     "Nblocks": 5,
     "alpha_block": 0.02,
-    "nu": 5,
+    "nu_like": 5,
+    "nu_prior": 5,
     "fmin": null,
     "fmax": null,
-    "nu_prior": 5,
     "sigma_prior": {
             "p0": 1e-4,
             "e0": 1e-5,
