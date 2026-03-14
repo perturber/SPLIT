@@ -1,6 +1,4 @@
 from eryn.moves import MHMove, RedBlueMove
-import numpy as np
-import cupy as cp
 
 #define a global custom move class for probabilistic blocked Gibbs updates of the evolving parameters.
 class BlockedGibbsGaussianMove(MHMove):
@@ -73,7 +71,7 @@ class BlockedGibbsGaussianMove(MHMove):
                     mean_evol, cov_t, size=nwalkers
                 )
                 q["evolving"][t, :, leaf_idx, :] += evolving_step
-                
+
         # symmetric proposal. log proposal ratio factor is 0
         factors = self.xp.zeros((ntemps,nwalkers))
 
