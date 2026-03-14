@@ -218,7 +218,7 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
 
         return q, factors
     
-class SequentialBlockedStretchMove(RedBlueMove):
+class SequentialBlockedGibbsStretchMove(RedBlueMove):
     def __init__(self, a=2.0, **kwargs):
         """
         Custom RedBlue move class for deterministic, sequential Blocked updates 
@@ -233,23 +233,21 @@ class SequentialBlockedStretchMove(RedBlueMove):
         super().__init__(**kwargs)
     
     def get_proposal(self, s, c, random, s_inds=None, c_inds=None, **kwargs):
-        use_gpu = getattr(self, "use_gpu", False)
-        xp = cp if use_gpu else np
 
         q = {}
 
         # s contains the ACTIVE walkers being moved
         # c contains the STATIONARY complementary walkers
-        s_stat = xp.asarray(s["static"])
-        c_stat = xp.asarray(c["static"])
-        s_evol = xp.asarray(s["evolving"])
-        c_evol = xp.asarray(c["evolving"])
+        s_stat = self.xp.asarray(s["static"])
+        c_stat = self.xp.asarray(c["static"])
+        s_evol = self.xp.asarray(s["evolving"])
+        c_evol = self.xp.asarray(c["evolving"])
 
         ntemps, nactive, nleaves, ndim_evol = s_evol.shape
         _, ncomp, _, ndim_stat = c_stat.shape
 
         q = {"static": s_stat.copy(), "evolving": s_evol.copy()}
-        rng = random if not use_gpu else xp.random
+        rng = random if not getattr(self, "use_gpu", False) else self.xp.random
 
         # Deterministic scheduling: N blocks + 1 static update
         cycle_length = nleaves + 1
@@ -262,10 +260,10 @@ class SequentialBlockedStretchMove(RedBlueMove):
 
         # Draw the stretch scale variable z from the standard distribution
         zz = ((self.a - 1.0) * rng.rand(ntemps, nactive) + 1.0) ** 2.0 / self.a
-        factors = xp.zeros((ntemps, nactive))
+        factors = self.xp.zeros((ntemps, nactive))
 
         # Setup advanced index for vectorization over temperatures
-        t_idx = xp.arange(ntemps)[:, None]
+        t_idx = self.xp.arange(ntemps)[:, None]
 
         if current_target == nleaves:
             # ---------------- STATIC UPDATE ----------------
@@ -280,7 +278,7 @@ class SequentialBlockedStretchMove(RedBlueMove):
             q["static"][:, :, 0, :] = c_val - zz_expanded * (c_val - s_val)
             
             # The factor scales by the dimensionality of the updated block
-            factors += (ndim_stat - 1.0) * xp.log(zz)
+            factors += (ndim_stat - 1.0) * self.xp.log(zz)
 
         else:
             # ---------------- EVOLVING UPDATE ----------------
@@ -291,7 +289,7 @@ class SequentialBlockedStretchMove(RedBlueMove):
             zz_expanded = zz[:, :, None]
             
             q["evolving"][:, :, leaf_idx, :] = c_val - zz_expanded * (c_val - s_val)
-            factors += (ndim_evol - 1.0) * xp.log(zz)
+            factors += (ndim_evol - 1.0) * self.xp.log(zz)
 
         # Increment the step counter for the next half-sweep
         self.step_counter += 1

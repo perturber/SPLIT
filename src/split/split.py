@@ -28,7 +28,7 @@ from lisatools.sensitivity import get_sensitivity, A1TDISens, E1TDISens
 #utility tools from StableEMRIFisher
 from stableemrifisher.utils import tukey, generate_PSD, SNRcalc
 
-from .moves import SequentialAdaptiveBlockedGibbsGaussianMove, SequentialBlockedStretchMove
+from .moves import SequentialAdaptiveBlockedGibbsGaussianMove, SequentialBlockedGibbsStretchMove
 from .diagnostics import update_diagnostic_plots
 from .priors import MarkovStudenttPrior
 from .utils import compute_rhat
@@ -567,7 +567,7 @@ class SPLIT:
         
         if moves_dict.get("BlockStretch", 0.0) > 0.0:
             # block-wise sequential stretch move
-            custom_stretch_move = SequentialBlockedStretchMove(a=2.0)
+            custom_stretch_move = SequentialBlockedGibbsStretchMove(a=2.0)
             mixed_moves.append((custom_stretch_move, moves_dict["BlockStretch"]))
 
         if moves_dict.get("BlockGaussian", 0.0) > 0.0:
