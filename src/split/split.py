@@ -627,6 +627,7 @@ class SPLIT:
                 print(f"Running burn-in steps...")
                 for burn_state in sampler.sample(current_state, iterations=burn, store=False, progress=True):
                     pass
+                print(f"Burn-in complete! Starting main run...")
                 current_state = burn_state
 
             for sample in sampler.sample(current_state, iterations=nsteps, progress=True, thin_by=thin_by):
