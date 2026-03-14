@@ -128,9 +128,9 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
 
                 try:
                     traj_output = kerr_traj_instance(*traj_args[:-3], 
-                                                     Phi_phi0=-traj_args[-3][-1], #negative sign for the final phases so it is handled correctly in FEW
-                                                     Phi_theta0=-traj_args[-2][-1],
-                                                     Phi_r0=-traj_args[-1][-1], 
+                                                     Phi_phi0=-traj_args[-3], #negative sign for the final phases so it is handled correctly in FEW
+                                                     Phi_theta0=-traj_args[-2],
+                                                     Phi_r0=-traj_args[-1], 
                                                      T=T_backwards, dt=dt, upsample=False, #upsample = False to get the final sample at exactly t=0.
                                                      integrate_backwards=True)
                     p0_proj = traj_output[1][-1]
