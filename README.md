@@ -33,6 +33,16 @@ Currently available only for devices with GPUs and with CUDA drivers. Not compat
 2. **fastlisaresponse**: Please use a version of `fastlisaresponse` which has the option to specify `t0` ([see definition](https://github.com/mikekatz04/lisa-on-gpu/blob/v1.2.1a0/src/fastlisaresponse/response.py#L700)) and `t_buffer` ([see definition](https://github.com/mikekatz04/lisa-on-gpu/blob/v1.2.1a0/src/fastlisaresponse/response.py#L701)) separately. This package has been validated for the tag [v1.2.1a0](https://github.com/mikekatz04/lisa-on-gpu/tree/v1.2.1a0). It can be pip installed for cuda12x as:
    ```bash
    pip install --pre fastlisaresponse-cuda12x==1.2.1a0
+3. **lisaanalysistools**: This package has been validated for the tag [v1.2.8](https://github.com/mikekatz04/LISAanalysistools/tree/v1.2.8). It can be pip installed for cuda12x as:
+   ```bash
+   pip install lisaanalysistools-cuda12x==1.2.8
+
+`lisaanalysistools` will try auto-installing a suitable version of cupy. So it is better to install it before any other dependencies.
+4. **FastEMRIWaveforms**: This package has been validated for the tag [v2.0.0](https://github.com/BlackHolePerturbationToolkit/FastEMRIWaveforms/tree/v2.0.0). It can be installed from source as:
+   ```bash
+   git clone https://github.com/BlackHolePerturbationToolkit/FastEMRIWaveforms.git
+   cd FastEMRIWaveforms
+   git checkout v2.0.0
 
 ## Configuration Setup
 
