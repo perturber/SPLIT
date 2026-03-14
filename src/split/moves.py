@@ -68,7 +68,7 @@ class BlockedGibbsGaussianMove(MHMove):
         return q, factors
 
 # similarly, define a probabilistic blocked stretch move class 
-class BlockedStretchMove(RedBlueMove):
+class BlockedGibbsStretchMove(RedBlueMove):
     def __init__(self, a=2.0, prob_hyper=0.5, **kwargs):
         """
         Custom RedBlue move class for Blocked updates of the evolving parameters (leaves) and the hyper parameters (static branch).
