@@ -1,5 +1,7 @@
 # SPLIT (Sliced Posteriors for Long-Inspiral Trajectories)
-SPLIT is a Python package designed for semi-coherent inference of extreme-mass-ratio inspirals (EMRIs) on multi-GPU devices.
+SPLIT is a Python package designed for Semi-Coherent EMRI (Extreme-Mass-Ratio Inspiral) Parameter Estimation on Multi-GPUs.
+
+Unlike many standard semi-coherent pipelines, SPLIT explicitly exploits the physical hierarchy of the system by decomposing the parameter space into **static** and **evolving** parameters to construct a natural semi-coherent inference framework. The primary motivation for this hierarchical approach is to ensure robustness against non-stationarities in the detector data and potential waveform modeling inaccuracies. In purely coherent searches, these issues accumulate over the long observation track, leading to severe signal dephasing and strong parameter biases. SPLIT mitigates this by allowing evolving parameter relaxation across blocks.
 
 ## Features
 
