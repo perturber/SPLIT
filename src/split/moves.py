@@ -271,9 +271,11 @@ class SequentialBlockedGibbsStretchMove(RedBlueMove):
         # s contains the ACTIVE walkers being moved
         # c contains the STATIONARY complementary walkers
         s_stat = self.xp.asarray(s["static"])
-        c_stat = self.xp.asarray(c["static"])
         s_evol = self.xp.asarray(s["evolving"])
-        c_evol = self.xp.asarray(c["evolving"])
+
+        # the complementary walker sets must be flattened
+        c_stat = self.xp.concatenate([self.xp.asarray(c_val) for c_val in c["static"]], axis=1)
+        c_evol = self.xp.concatenate([self.xp.asarray(c_val) for c_val in c["evolving"]], axis=1)
 
         ntemps, nactive, nleaves, ndim_evol = s_evol.shape
         _, ncomp, _, ndim_stat = c_stat.shape
@@ -357,8 +359,9 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
         # c contains the STATIONARY complementary walkers (used to build the covariance)
         s_stat = self.xp.asarray(s["static"])
         s_evol = self.xp.asarray(s["evolving"])
-        c_stat = self.xp.asarray(c["static"])
-        c_evol = self.xp.asarray(c["evolving"])
+
+        c_stat = self.xp.concatenate([self.xp.asarray(c_val) for c_val in c["static"]], axis=1)
+        c_evol = self.xp.concatenate([self.xp.asarray(c_val) for c_val in c["evolving"]], axis=1)
 
         ntemps, nactive, nleaves, ndim_evol = s_evol.shape
         _, _, _, ndim_stat = s_stat.shape
