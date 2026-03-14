@@ -135,8 +135,8 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
                                                      integrate_backwards=True)
                     p0_proj = traj_output[1][-1]
                     e0_proj = traj_output[2][-1]
-                    pp0_proj = -traj_output[4][-1] % (2 * np.pi) #negative sign for phases so it is handled correctly in FEW, modulo for periodicity
-                    pr0_proj = -traj_output[6][-1] % (2 * np.pi)
+                    pp0_proj = -traj_output[4][0] % (2 * np.pi) #negative sign for phases so it is handled correctly in FEW, modulo for periodicity
+                    pr0_proj = -traj_output[6][0] % (2 * np.pi)
                     
                     proj_ev_sampled = [p0_proj, e0_proj, pp0_proj, pr0_proj]
                     projected_t0_samples.append(list(samp_st[j]) + proj_ev_sampled)
