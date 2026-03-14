@@ -27,6 +27,7 @@ class BlockedGibbsGaussianMove(MHMove):
         s_evol = self.xp.asarray(branches_coords["evolving"])
 
         ntemps, nwalkers, nleaves, ndim_evolving = s_evol.shape
+        _, _, _, ndim_stat = s_stat.shape
 
         cov_stat_xp = self.xp.asarray(self.cov_static)
         cov_evol_xp = self.xp.asarray(self.cov_evolving)
@@ -35,15 +36,26 @@ class BlockedGibbsGaussianMove(MHMove):
 
         rng = random if not getattr(self, "use_gpu", False) else self.xp.random
 
+        # Extract inverse temperatures (betas) for tempering
+        # Fallback to an array of 1.0s if tempering is not initialized
+        betas = self.xp.ones(ntemps)
+        if hasattr(self, "temperature_control") and self.temperature_control is not None:
+            betas = self.xp.asarray(self.temperature_control.betas)
+
         #Randomly choose ONE branch to update
         if random.uniform() < self.prob_hyper:
             #update the hyper parameters (static branch).
             # generate steps for the static branch shape: (ntemps, nwalkers, 1 leaf, ndim_static)
             mean_stat = self.xp.zeros(len(self.cov_static))
-            static_step = rng.multivariate_normal(
-                mean_stat, cov_stat_xp, size=(ntemps, nwalkers, 1)
-            )
-            q["static"] += static_step
+            # Loop over temperatures to apply the scaled covariance matrix
+            for t in range(ntemps):
+                # Scale covariance by T = 1 / beta
+                cov_t = cov_stat_xp / betas[t]
+                
+                static_step = rng.multivariate_normal(
+                    mean_stat, cov_t, size=(nwalkers, 1)
+                )
+                q["static"][t] += static_step
 
         else:
             #update ONE of the leaves (blocks) of the evolving branch.
@@ -52,11 +64,16 @@ class BlockedGibbsGaussianMove(MHMove):
 
             # generate step for the evolving branch for the chosen leaf of shape (ntemps, nwalkers, ndim_evolving)
             mean_evol = self.xp.zeros(len(self.cov_evolving))
-            evolving_step = rng.multivariate_normal(
-                mean_evol, cov_evol_xp, size=(ntemps, nwalkers,)
-            )
-            q["evolving"][:, :, leaf_idx, :] += evolving_step
-
+            # Loop over temperatures to apply the scaled covariance matrix
+            for t in range(ntemps):
+                # Scale covariance by T = 1 / beta
+                cov_t = cov_evol_xp / betas[t]
+                
+                evolving_step = rng.multivariate_normal(
+                    mean_evol, cov_t, size=nwalkers
+                )
+                q["evolving"][t, :, leaf_idx, :] += evolving_step
+                
         # symmetric proposal. log proposal ratio factor is 0
         factors = self.xp.zeros((ntemps,nwalkers))
 
@@ -176,6 +193,7 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
         s_evol = self.xp.asarray(branches_coords["evolving"])
 
         ntemps, nwalkers, nleaves, ndim_evolving = s_evol.shape
+        _, _, _, ndim_stat = s_stat.shape
 
         cov_stat_xp = self.xp.asarray(self.cov_static)
         cov_evol_xp = self.xp.asarray(self.cov_evolving)
@@ -183,6 +201,12 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
         q = {"static": s_stat.copy(), "evolving": s_evol.copy()}
 
         rng = random if not getattr(self, "use_gpu", False) else self.xp.random
+
+        # Extract inverse temperatures (betas) for tempering
+        # Fallback to an array of 1.0s if tempering is not initialized
+        betas = self.xp.ones(ntemps)
+        if hasattr(self, "temperature_control") and self.temperature_control is not None:
+            betas = self.xp.asarray(self.temperature_control.betas)
 
         # Deterministic scheduling: 
         # A full cucle is all N blocks + 1 static update
@@ -192,18 +216,28 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
         if current_target == nleaves:
             # Update the static parameters
             mean_stat = self.xp.zeros(len(self.cov_static))
-            static_step = rng.multivariate_normal(
-                mean_stat, cov_stat_xp, size=(ntemps, nwalkers, 1)
-            )
-            q["static"] += static_step
+            # Loop over temperatures to apply the scaled covariance matrix
+            for t in range(ntemps):
+                # Scale covariance by T = 1 / beta
+                cov_t = cov_stat_xp / betas[t]
+                
+                static_step = rng.multivariate_normal(
+                    mean_stat, cov_t, size=(nwalkers, 1)
+                )
+                q["static"][t] += static_step
         else:
             # Update the specific sequential leaf/Block
             leaf_idx = current_target
             mean_evol = self.xp.zeros(len(self.cov_evolving))
-            evolving_step = rng.multivariate_normal(
-                mean_evol, cov_evol_xp, size=(ntemps, nwalkers,)
-            )
-            q["evolving"][:, :, leaf_idx, :] += evolving_step
+            # Loop over temperatures to apply the scaled covariance matrix
+            for t in range(ntemps):
+                # Scale covariance by T = 1 / beta
+                cov_t = cov_evol_xp / betas[t]
+                
+                evolving_step = rng.multivariate_normal(
+                    mean_evol, cov_t, size=nwalkers
+                )
+                q["evolving"][t, :, leaf_idx, :] += evolving_step
 
         # Increment the step counter for the next call of this move
         self.step_counter += 1
