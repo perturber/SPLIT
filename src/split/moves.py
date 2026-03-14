@@ -379,6 +379,9 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
 
         factors = self.xp.zeros((ntemps, nactive))
 
+        # The eigh method for multivariate_normal covariance is only available in CuPy.
+        mvn_kwargs = {"method": "eigh"} if getattr(self, "use_gpu", False) else {}
+
         if current_target == nleaves:
             # ---------------- STATIC UPDATE ----------------
             scale = self.mode_factor if self.mode_factor is not None else (2.38 ** 2) / ndim_stat
@@ -391,7 +394,8 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
                 cov_t = cov_t * scale + self.xp.eye(ndim_stat) * self.reg
                 
                 mean_stat = self.xp.zeros(ndim_stat)
-                static_step = rng.multivariate_normal(mean_stat, cov_t, size=nactive)
+                # ! Warning: "method" arg is unavailable if rng created from numpy!
+                static_step = rng.multivariate_normal(mean_stat, cov_t, size=nactive, **mvn_kwargs) 
                 q["static"][t, :, 0, :] += static_step
 
         else:
@@ -407,7 +411,8 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
                 cov_t = cov_t * scale + self.xp.eye(ndim_evol) * self.reg
                 
                 mean_evol = self.xp.zeros(ndim_evol)
-                evolving_step = rng.multivariate_normal(mean_evol, cov_t, size=nactive)
+                # ! Warning: "method" arg is unavailable if rng created from numpy!
+                evolving_step = rng.multivariate_normal(mean_evol, cov_t, size=nactive, **mvn_kwargs)
                 q["evolving"][t, :, leaf_idx, :] += evolving_step
 
         # Increment the step counter for the next half-sweep
