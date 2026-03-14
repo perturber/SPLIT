@@ -147,7 +147,7 @@ class BlockedGibbsStretchMove(RedBlueMove):
 
             factors += (ndim - 1.0) * self.xp.log(zz)
 
-        if self.use_gpu and not getattr(self, "return_gpu", False):
+        if getattr(self, "use_gpu", False) and not getattr(self, "return_gpu", False):
             q["static"] = q["static"].get()
             q["evolving"] = q["evolving"].get()
             factors = factors.get()
@@ -294,7 +294,7 @@ class SequentialBlockedGibbsStretchMove(RedBlueMove):
         # Increment the step counter for the next half-sweep
         self.step_counter += 1
 
-        if use_gpu and not getattr(self, "return_gpu", False):
+        if getattr(self, "use_gpu", False) and not getattr(self, "return_gpu", False):
             q["static"] = q["static"].get()
             q["evolving"] = q["evolving"].get()
             factors = factors.get()
@@ -318,8 +318,6 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
         super().__init__(**kwargs)
 
     def get_proposal(self, s, c, random, s_inds=None, c_inds=None, **kwargs):
-        use_gpu = getattr(self, "use_gpu", False)
-        self.xp = cp if use_gpu else np
 
         q = {}
 
