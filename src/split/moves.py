@@ -391,7 +391,7 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
                 cov_t = cov_t * scale + self.xp.eye(ndim_stat) * self.reg
                 
                 mean_stat = self.xp.zeros(ndim_stat)
-                static_step = rng.multivariate_normal(mean_stat, cov_t, size=nactive, method='eigh')
+                static_step = rng.multivariate_normal(mean_stat, cov_t, size=nactive)
                 q["static"][t, :, 0, :] += static_step
 
         else:
@@ -407,7 +407,7 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
                 cov_t = cov_t * scale + self.xp.eye(ndim_evol) * self.reg
                 
                 mean_evol = self.xp.zeros(ndim_evol)
-                evolving_step = rng.multivariate_normal(mean_evol, cov_t, size=nactive, method='eigh')
+                evolving_step = rng.multivariate_normal(mean_evol, cov_t, size=nactive)
                 q["evolving"][t, :, leaf_idx, :] += evolving_step
 
         # Increment the step counter for the next half-sweep
