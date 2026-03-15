@@ -56,6 +56,14 @@ The SPLIT orchestrator runs by ingesting two distinct JSON configuration files:
 
 ## Usage Quickstart
 
-Simply run the `run_job.py` script directly from your terminal inside the conda environment. This script automatically handles the CUDA multiprocessing initialization and executes the main stages of the pipeline sequentially:
+1. Simply run the `run_job.py` script directly from your terminal inside the conda environment. This script automatically handles the CUDA multiprocessing initialization and executes the main stages of the pipeline sequentially:
    ```bash
    python run_job.py
+
+2. You can specify custom configuration files and a custom output directory using command-line flags:
+   ```bash
+   python run_job.py --emri emri_config.json --samp sample_config.json --out SPLIT_Outputs
+
+3. View all available command-line options and their descriptions using the help flag:
+   ```bash
+   python run_job.py -h
