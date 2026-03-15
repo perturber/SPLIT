@@ -5,13 +5,29 @@ from split import SPLIT
 
 if __name__ == '__main__':
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="Run the SPLIT pipeline.")
+    parser = argparse.ArgumentParser(
+        description="Run the SPLIT pipeline.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
     parser.add_argument('--emri', type=str, default='emri_config.json',
-                        help='Path to the EMRI configuration JSON file.')
+                        help="Path to the EMRI configuration JSON file.\n"
+                        "Allowed keywords:\n"
+                        "  - Kerr Params: m1, m2, a, p0, e0, xI0, dist, qS, phiS, qK, phiK, Phi_phi0, Phi_theta0, Phi_r0\n"
+                        "  - Observation: T, dt, desired_SNR\n"
+                        "  - Slicing/Masks: Nblocks, alpha_block, fmin, fmax\n"
+                        "  - Likelihood/Prior: nu_like, nu_prior, sigma_prior")
+    
     parser.add_argument('--samp', type=str, default='sample_config.json',
-                        help='Path to the sampling configuration JSON file.')
+                        help="Path to the sampling configuration JSON file.\n"
+                             "Allowed keywords:\n"
+                             "  - Param Buckets: evolving_params, static_params, fixed_evolving\n"
+                             "  - Sampler Setup: nwalkers, ntemps, nsteps, burn, thin_by\n"
+                             "  - Logistics: check_interval, check_converge, moves\n"
+                             "  - File I/O: filename (or new_filename), old_filename")
+    
     parser.add_argument('--out', type=str, default='SPLIT_Outputs',
-                        help='Path to output folder')
+                        help="Path to the root output folder where chains and diagnostics will be saved.")
+    
     args = parser.parse_args()
 
     # Mandatory initialization for PyTorch/CUDA multiprocessing safety
