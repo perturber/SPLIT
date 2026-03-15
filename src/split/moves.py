@@ -1,4 +1,6 @@
 from eryn.moves import MHMove, RedBlueMove
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module="cupy")
 
 #define a global custom move class for probabilistic blocked Gibbs updates of the evolving parameters.
 class BlockedGibbsGaussianMove(MHMove):
