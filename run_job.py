@@ -33,7 +33,8 @@ if __name__ == '__main__':
     # Mandatory initialization for PyTorch/CUDA multiprocessing safety
     mp.set_start_method('spawn', force=True)
 
-    out_dir_root = "." #must already exist
+    # Automatically set the root directory to the current working directory
+    out_dir_root = os.getcwd()
     out_dir = os.path.join(out_dir_root, args.out)
     os.makedirs(out_dir, exist_ok=True)
 
