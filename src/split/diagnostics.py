@@ -150,22 +150,30 @@ def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_e
                     T=T_backwards, dt=dt, upsample=False, integrate_backwards=True
                 )
                 
-                # FIX APPLIED: Extract from index 0 (t=0) and drop modulo to show true unwrapped phase variance
-                proj_ev = [
-                    traj_output[1][0],  # p0
-                    traj_output[2][0],  # e0
-                    -traj_output[4][0], # Phi_phi0
-                    -traj_output[6][0]  # Phi_r0
-                ]
+                proj_ev_dict = {
+                    "p0": traj_output[1][-1],
+                    "e0": traj_output[2][-1],
+                    "xI0": traj_output[3][-1],
+                    "Phi_phi0": -traj_output[4][0],
+                    "Phi_theta0": -traj_output[5][0],
+                    "Phi_r0": -traj_output[6][0]
+                }
+                
+                # Dynamically extract only the actively sampled parameters in the correct order
+                proj_ev = [proj_ev_dict[name] for name in names_ev]
+                
                 projected_t0_samples.append(list(recent_st[j]) + proj_ev)
             except Exception:
                 continue
 
     if projected_t0_samples:
         projected_t0_samples = np.array(projected_t0_samples)
+        
+        active_truths = [true_pars_all[idx] for idx in idx_st_in] + [true_pars_all[idx] for idx in idx_ev_in]
+        
         try:
             fig_t0 = corner.corner(
-                projected_t0_samples, labels=(names_st + names_ev), truths=true_pars_all, 
+                projected_t0_samples, labels=(names_st + names_ev), truths=active_truths, 
                 show_titles=True, quantiles=[0.16, 0.5, 0.84]
             )
             plt.savefig(os.path.join(out_dir, "corner_t0_projected.png"), dpi=300)

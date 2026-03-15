@@ -527,7 +527,7 @@ class SPLIT:
             print(f"New chain initiated. File not found or empty. Creating: {new_filename}")
             backend = HDFBackend(new_filename)
             
-            jitter = 1e-4 #initial jitter for seeding walkers around true values
+            jitter = 1e-5 #initial jitter for seeding walkers around true values
 
             # Create Static State
             coords_static = np.tile(val_samp_st, (ntemps, nwalkers, 1, 1))
@@ -555,8 +555,8 @@ class SPLIT:
         # 4. Set up MCMC Architecture and Backend
 
         moves_dict = self.samp.get("moves", {
-            "BlockStretch": 0.5, # sequential blocked gibbs sampler with stretch moves.
-            "BlockGaussian": 0.5 # sequential blocked gibbs sampler with Gauss moves and a fixed covariance kernel.
+            "BlockStretch": 0.5, # sequential blocked Gibbs sampler with stretch moves.
+            "BlockGaussian": 0.5 # sequential blocked Gibbs sampler with Gauss moves and a fixed covariance kernel.
         })
 
         # Instantiate the shared step counter for sequential moves
