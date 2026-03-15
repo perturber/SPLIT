@@ -28,7 +28,7 @@ from lisatools.sensitivity import get_sensitivity, A1TDISens, E1TDISens
 #utility tools from StableEMRIFisher
 from stableemrifisher.utils import tukey, generate_PSD, SNRcalc
 
-from .moves import SequentialAdaptiveBlockedGibbsGaussianMove, SequentialBlockedGibbsStretchMove
+from .moves import SequentialAdaptiveBlockedGibbsGaussianMove, SequentialBlockedGibbsStretchMove, SequentialBlockedGibbsGaussianMove, SharedState
 from .diagnostics import update_diagnostic_plots
 from .priors import MarkovStudenttPrior
 from .utils import compute_rhat
@@ -555,9 +555,12 @@ class SPLIT:
         # 4. Set up MCMC Architecture and Backend
 
         moves_dict = self.samp.get("moves", {
-            "BlockStretch": 0.5,
-            "BlockGaussian": 0.5
+            "BlockStretch": 0.5, # sequential blocked gibbs sampler with stretch moves.
+            "BlockGaussian": 0.5 # sequential blocked gibbs sampler with Gauss moves and a fixed covariance kernel.
         })
+
+        # Instantiate the shared step counter for sequential moves
+        master_state = SharedState()
 
         mixed_moves = []
 
@@ -569,18 +572,37 @@ class SPLIT:
             # block-wise sequential stretch move
             custom_stretch_move = SequentialBlockedGibbsStretchMove(
                 a=2.0,
-                use_gpu=self.use_gpu
+                use_gpu=self.use_gpu,
+                shared_state=master_state
             )
             mixed_moves.append((custom_stretch_move, moves_dict["BlockStretch"]))
 
         if moves_dict.get("BlockGaussian", 0.0) > 0.0:
+            # block wise sequential Gaussian move
+            # Construct the fixed covariance dictionary using branch dimensions
+
+            # custom cov scale that can be provided by the user.
+            cov_scale = self.samp.get("gauss_cov_scale", 1e-9) 
+            fixed_cov = {
+                "static": np.eye(ndim_static) * cov_scale, #self.xp not needed because SequentialBlockedGibbsGaussianMove handles it.
+                "evolving": np.eye(ndim_evolving) * cov_scale
+            }
+            custom_gauss_move = SequentialBlockedGibbsGaussianMove(
+                cov=fixed_cov,
+                use_gpu=self.use_gpu,
+                shared_state=master_state
+            )
+            mixed_moves.append((custom_gauss_move, moves_dict["BlockGaussian"]))
+
+        if moves_dict.get("BlockAdaptGaussian", 0.0) > 0.0:
             # block-wise sequential Gaussian move
             # The covariance matrix for Gaussian kernel is adaptively modified. 
-            custom_gibbs_move = SequentialAdaptiveBlockedGibbsGaussianMove(
+            custom_adaptgauss_move = SequentialAdaptiveBlockedGibbsGaussianMove(
                 reg=1e-9,
-                use_gpu=self.use_gpu
+                use_gpu=self.use_gpu,
+                shared_state=master_state
             )
-            mixed_moves.append((custom_gibbs_move, moves_dict["BlockGaussian"]))
+            mixed_moves.append((custom_adaptgauss_move, moves_dict["BlockAdaptGaussian"]))
 
         # 5. Initialize Multi-GPU pool
         num_processes = cp.cuda.runtime.getDeviceCount() * 2
@@ -642,12 +664,32 @@ class SPLIT:
 
                     min_autocorr_iters = 5 #minimum number of iterations (N = min_autocorr_iters * tau) for reliable tau calcs. 
 
+                    # 1. Pack the trajectory reconstruction variables into a single dictionary for plotting
+                    traj_config = {
+                        "dt": self.emri['dt'],
+                        "slice_length": self.slice_length,
+                        "idx_st_in": indices_static_in,
+                        "idx_ev_in": indices_ev_in,
+                        "idx_st_fix": indices_static_fixed,
+                        "idx_ev_fix": indices_ev_fixed,
+                        "val_st_fix": value_fixed_static,
+                        "val_ev_fix": value_fixed_ev,
+                        "kerr_traj_instance": kerr_traj,
+                        "traj_indices": traj_indices,
+                        "total_pars_len": len(self.all_param_names)
+                    }
+
+                    # 2. Call the diagnostic plots function
                     update_diagnostic_plots(
-                        sampler, diagnostics, Nblocks, self.emri['dt'], self.slice_length, 
-                        self.samp['evolving_params'], self.samp['static_params'], value_fixed_static, value_fixed_ev,
-                        indices_static_in, indices_ev_in, indices_static_fixed, indices_ev_fixed,
-                        self.all_param_names, self.true_pars, traj_indices, kerr_traj, 
-                        val_samp_ev=val_samp_ev, val_samp_st=val_samp_st,
+                        sampler=sampler, 
+                        diagnostics_dir=diagnostics, 
+                        Nblocks=Nblocks, 
+                        static_in_names=self.samp['static_params'], 
+                        ev_in_names=self.samp['evolving_params'],
+                        val_samp_st=val_samp_st, 
+                        val_samp_ev=val_samp_ev, 
+                        true_pars_all=self.true_pars, 
+                        traj_config=traj_config, 
                         min_autocorr_iters=min_autocorr_iters
                     )
 

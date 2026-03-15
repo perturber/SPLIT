@@ -2,6 +2,10 @@ from eryn.moves import MHMove, RedBlueMove
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning, module="cupy")
 
+class SharedState:
+    def __init__(self):
+        self.step = 0
+
 #define a global custom move class for probabilistic blocked Gibbs updates of the evolving parameters.
 class BlockedGibbsGaussianMove(MHMove):
     def __init__(self, cov, prob_hyper=0.5,**kwargs):
@@ -172,17 +176,18 @@ class BlockedGibbsStretchMove(RedBlueMove):
         return q, factors
     
 class SequentialBlockedGibbsGaussianMove(MHMove):
-    def __init__(self, cov, **kwargs):
+    def __init__(self, cov, shared_state=None, **kwargs):
         """
         Custom MHmove class for sequential updates of the
         evolving parameters (leaves) and hyper parameters (static branch).
         cov (dict): keys: branch names values: covariance matrices for those branches.
+        shared_state (SharedState): Object to synchronize the iteration step across mixed moves.
         """
         self.cov_evolving = cov["evolving"]
         self.cov_static = cov["static"]
 
         # Internal step counter to track the Gibbs sweep
-        self.step_counter = 0
+        self.shared_state = shared_state if shared_state is not None else SharedState()
 
         super().__init__(**kwargs)
 
@@ -211,7 +216,8 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
         # Deterministic scheduling: 
         # A full cucle is all N blocks + 1 static update
         cycle_length = nleaves + 1
-        current_target = self.step_counter % cycle_length
+        # We perform module two for compatibility with other move classes with RedBlueMove which is called twice.
+        current_target = (self.shared_state.step // 2) % cycle_length
 
         if current_target == nleaves:
             # Update the static parameters
@@ -240,7 +246,8 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
                 q["evolving"][t, :, leaf_idx, :] += evolving_step
 
         # Increment the step counter for the next call of this move
-        self.step_counter += 1
+        # We add by two for compatibility with other move classes with RedBlueMove which is called twice.
+        self.shared_state.step += 2
 
         # symmetric proposal. log proposal ratio factor is 0
         factors = self.xp.zeros((ntemps,nwalkers))
@@ -253,7 +260,7 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
         return q, factors
     
 class SequentialBlockedGibbsStretchMove(RedBlueMove):
-    def __init__(self, a=2.0, **kwargs):
+    def __init__(self, a=2.0, shared_state=None, **kwargs):
         """
         Custom RedBlue move class for deterministic, sequential Blocked updates 
         of the evolving parameters (leaves) and the hyper parameters (static branch).
@@ -261,9 +268,11 @@ class SequentialBlockedGibbsStretchMove(RedBlueMove):
         StretchMove is based on Goodman & Weare's affine-invariant move.
         
         a (float): stretch move scale parameter
+        shared_state (SharedState): Object to synchronize the iteration step across mixed moves.
         """
         self.a = a
-        self.step_counter = 0
+        # Fallback to an independent state if none is provided
+        self.shared_state = shared_state if shared_state is not None else SharedState()
         super().__init__(**kwargs)
     
     def get_proposal(self, s, c, random, s_inds=None, c_inds=None, **kwargs):
@@ -289,7 +298,7 @@ class SequentialBlockedGibbsStretchMove(RedBlueMove):
         cycle_length = nleaves + 1
         
         # Ensure both halves of the RedBlue split update the exact same block
-        current_target = (self.step_counter // 2) % cycle_length
+        current_target = (self.shared_state.step // 2) % cycle_length
 
         # Draw random complementary walkers for each active walker
         rint = rng.randint(ncomp, size=(ntemps, nactive))
@@ -328,7 +337,7 @@ class SequentialBlockedGibbsStretchMove(RedBlueMove):
             factors += (ndim_evol - 1.0) * self.xp.log(zz)
 
         # Increment the step counter for the next half-sweep
-        self.step_counter += 1
+        self.shared_state.step += 1
 
         if getattr(self, "use_gpu", False) and not getattr(self, "return_gpu", False):
             q["static"] = q["static"].get()
@@ -338,7 +347,7 @@ class SequentialBlockedGibbsStretchMove(RedBlueMove):
         return q, factors
     
 class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
-    def __init__(self, mode_factor=None, reg=1e-9, **kwargs):
+    def __init__(self, mode_factor=None, reg=1e-9, shared_state=None, **kwargs):
         """
         Custom RedBlueMove class for sequential adaptive updates of the
         evolving parameters (leaves) and hyper parameters (static branch).
@@ -347,10 +356,12 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
                              mathematically optimal (2.38^2 / d) for Random Walk.
         reg (float): Small regularizer added to the diagonal to prevent matrix 
                      collapse during the very early burn-in steps.
+        shared_state (SharedState): Object to synchronize the iteration step 
+                                    across mixed moves.
         """
         self.mode_factor = mode_factor
         self.reg = reg
-        self.step_counter = 0
+        self.shared_state = shared_state if shared_state is not None else SharedState()
         super().__init__(**kwargs)
 
     def get_proposal(self, s, c, random, s_inds=None, c_inds=None, **kwargs):
@@ -377,7 +388,7 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
         # RedBlueMove calls get_proposal TWICE per full ensemble sweep. 
         # We use floor division (// 2) to ensure both halves of the ensemble 
         # update the exact same block before moving to the next one!
-        current_target = (self.step_counter // 2) % cycle_length
+        current_target = (self.shared_state.step // 2) % cycle_length
 
         factors = self.xp.zeros((ntemps, nactive))
 
@@ -418,7 +429,7 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
                 q["evolving"][t, :, leaf_idx, :] += evolving_step
 
         # Increment the step counter for the next half-sweep
-        self.step_counter += 1
+        self.shared_state.step += 1
 
         if getattr(self, "use_gpu", False) and not getattr(self, "return_gpu", False):
             q["static"] = q["static"].get()

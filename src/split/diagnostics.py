@@ -1,157 +1,215 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import emcee
 import corner
 from few.utils.constants import YRSID_SI
-import os
 
-def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
-                            ev_in_names, static_in_names, value_fixed_static, value_fixed_ev, 
-                            indices_static_in, indices_ev_in, indices_static_fixed, indices_ev_fixed,
-                            pars_names, true_pars, traj_indices, kerr_traj_instance,
-                            val_samp_ev, val_samp_st, min_autocorr_iters):
-    """Extract multi-branch chains, plot 1D walks, static posteriors, and t=0 projections.
-    TODO:The input arguments list can probably be cleaned up."""
-    print(f"\n[Step {sampler.iteration}] Generating diagnostic plots...")
-    os.makedirs(diagnostics_dir, exist_ok=True)
+def _plot_static_diagnostics(chain, names, truths, discard_idx, out_dir):
+    """Plots 1D walks and corner plots for the static branch."""
+    nsteps, nwalkers, ndim = chain.shape
+    
+    # 1D Walks
+    fig_1d, axs = plt.subplots(ndim, 1, figsize=(10, 3 * ndim))
+    # Ensure axs is iterable even if ndim == 1
+    if ndim == 1: axs = [axs] 
+    
+    for j in range(ndim):
+        axs[j].plot(chain[:, :, j], alpha=0.5)
+        axs[j].axhline(truths[j], color='k', linestyle='--', label='True value')
+        axs[j].set_ylabel(names[j])
+        if j == 0: axs[j].legend()
+    axs[-1].set_xlabel("Steps")
+    fig_1d.tight_layout()
+    plt.savefig(os.path.join(out_dir, "1dplots_static.png"), dpi=300)
+    plt.close(fig_1d)
 
-    chain_static = sampler.get_chain()["static"][:, 0, :, 0, :] #chain_static has shape (nsteps, nwalkers, ndim_static).
-    chain_evolving = sampler.get_chain()["evolving"][:, 0, :, :, :] #chain_evolving has shape (nsteps, nwalkers, Nblocks, ndim_evolving).
-
-    current_nsteps, nwalkers, ndim_static = chain_static.shape
-    ndim_evolving = chain_evolving.shape[-1]
-
-    # only work with the final 10% of each chain.
-    discard_idx = int(current_nsteps * 0.9)
-
-    # Plot A1: Static Corner Plot
-    flat_static = chain_static[discard_idx:].reshape(-1, ndim_static)
+    # Corner Plot
+    flat_chain = chain[discard_idx:].reshape(-1, ndim)
     try:
-        fig_corner_st = corner.corner(flat_static, labels=static_in_names, truths=val_samp_st, show_titles=True)
-        plt.savefig(f"{diagnostics_dir}/corner_static.png", bbox_inches='tight', dpi=300)
-        plt.close(fig_corner_st)
+        fig_corner = corner.corner(
+            flat_chain, labels=names, truths=truths, 
+            show_titles=True, quantiles=[0.16, 0.5, 0.84]
+        )
+        plt.savefig(os.path.join(out_dir, "corner_static.png"), dpi=300)
+        plt.close(fig_corner)
     except ValueError as e:
-        print(f" Skipping static corner plot: {e}")
+        print(f"Skipping static corner plot: {e}")
 
-    # Plot A2: Static 1D walks (includes burn-in)
-    fig_1d_static, axs_static = plt.subplots(ndim_static, 1, figsize=(10, 3 * ndim_static))
-    for j in range(ndim_static):
-        axs_static[j].plot(chain_static[:,:,j], alpha=0.5)
-        axs_static[j].axhline(val_samp_st[j], color='k', linestyle='--', label='True value')
-        axs_static[j].set_ylabel(f"{static_in_names[j]}")
-    axs_static[-1].set_xlabel("Steps")
-    plt.savefig(f"{diagnostics_dir}/1dplots_static.png", bbox_inches='tight', dpi=300)
-    plt.close(fig_1d_static)
+def _plot_evolving_diagnostics(chain, names, truths, discard_idx, Nblocks, out_dir):
+    """Plots 1D walks and corner plots for each block in the evolving branch."""
+    nsteps, nwalkers, _, ndim = chain.shape
 
-    # Plot B: 1D walks and corner plots per block for evolving parameters
     for i in range(Nblocks):
-        labels_ev_i = [f"{name}_{i}" for name in ev_in_names]
-        # --- 1D Walks ---
-        fig_1d, axs = plt.subplots(ndim_evolving, 1, figsize=(10, 3 * ndim_evolving))
-        for j in range(ndim_evolving):
-            axs[j].plot(chain_evolving[:, :, i, j], alpha=0.5)
-            axs[j].axhline(val_samp_ev[i,j], color='k', linestyle='--', label='True value')
-            axs[j].set_ylabel(labels_ev_i[j])
+        labels_i = [f"{name}_{i}" for name in names]
+        
+        # 1D Walks
+        fig_1d, axs = plt.subplots(ndim, 1, figsize=(10, 3 * ndim))
+        if ndim == 1: axs = [axs]
 
+        for j in range(ndim):
+            axs[j].plot(chain[:, :, i, j], alpha=0.5)
+            axs[j].axhline(truths[i, j], color='k', linestyle='--', label='True value')
+            axs[j].set_ylabel(labels_i[j])
+            if j == 0: axs[j].legend()
+        
         axs[-1].set_xlabel("Steps")
-        plt.savefig(f"{diagnostics_dir}/1dplots_block_{i}.png", bbox_inches='tight', dpi=300)
+        fig_1d.tight_layout()
+        plt.savefig(os.path.join(out_dir, f"1dplots_block_{i}.png"), dpi=300)
         plt.close(fig_1d)
 
-        # --- Corner Plot ---
-        flat_ev_i = chain_evolving[discard_idx:, :, i, :].reshape(-1, ndim_evolving)
+        # Corner Plot
+        flat_chain = chain[discard_idx:, :, i, :].reshape(-1, ndim)
         try:
-            fig_corner_ev = corner.corner(flat_ev_i, labels=labels_ev_i, truths=val_samp_ev[i], show_titles=True)
-            plt.savefig(f"{diagnostics_dir}/corner_evolving_{i}.png", bbox_inches='tight', dpi=300)
-            plt.close(fig_corner_ev)
+            fig_corner = corner.corner(
+                flat_chain, labels=labels_i, truths=truths[i], 
+                show_titles=True, quantiles=[0.16, 0.5, 0.84]
+            )
+            plt.savefig(os.path.join(out_dir, f"corner_evolving_{i}.png"), dpi=300)
+            plt.close(fig_corner)
         except ValueError as e:
             print(f"Skipping evolving corner plot for block {i}: {e}")
 
-    # Plot C: Autocorrelation Convergence
-    if current_nsteps > 100:
-        N_steps = np.exp(np.linspace(np.log(100), np.log(current_nsteps), 50)).astype(int)
-        taus_static = np.empty((len(N_steps), ndim_static))
-        taus_evolving = np.empty((len(N_steps), ndim_evolving))
+def _plot_autocorrelation(chain_st, chain_ev, out_dir, min_iters):
+    """Plots the integrated autocorrelation time for both branches."""
+    nsteps, nwalkers, ndim_st = chain_st.shape
+    _, _, Nblocks, ndim_ev = chain_ev.shape
 
-        for idx, n in enumerate(N_steps):
-            t_est_st = emcee.autocorr.integrated_time(chain_static[:n], tol=min_autocorr_iters, quiet=True)
-            taus_static[idx] = t_est_st
+    if nsteps <= 100:
+        return
 
-            reshaped_ev = chain_evolving[:n].transpose(0,1,2,3).reshape(n, nwalkers*Nblocks, ndim_evolving)
-            t_est_ev = emcee.autocorr.integrated_time(reshaped_ev, tol=min_autocorr_iters, quiet=True)
-            taus_evolving[idx] = t_est_ev
+    N_steps = np.exp(np.linspace(np.log(100), np.log(nsteps), 50)).astype(int)
+    taus_st = np.empty((len(N_steps), ndim_st))
+    taus_ev = np.empty((len(N_steps), ndim_ev))
 
-        fig_ac, (ax1, ax2) = plt.subplots(2,1, figsize=(8,10))
-        for j in range(ndim_static):
-            ax1.loglog(N_steps, taus_static[:,j], "b-", alpha=0.3)
-        ax1.loglog(N_steps, N_steps/50.0, "--r", label=r"$\tau = N/50$")
-        ax1.set_title("Autocorrelations: Static branch")
-
-        for j in range(ndim_evolving):
-            ax2.loglog(N_steps, taus_evolving[:,j], "g-", alpha=0.3)
-        ax2.loglog(N_steps, N_steps/50.0, "--r")
-        ax2.set_title("Autocorrelations (max across blocks): evolving branch")
-
-        ax1.legend()
-        plt.savefig(f"{diagnostics_dir}/autocorr.png", bbox_inches='tight', dpi=300)
-        plt.close(fig_ac)
-
-    # Plot D: Backward Evolution to t=0
-    if current_nsteps > 100:
-        print("Evolving samples backwards to t=0 for joint posterior...")
-
-        recent_static = chain_static[discard_idx:].reshape(-1, ndim_static)
-        recent_evolving = chain_evolving[discard_idx:].reshape(-1, Nblocks, ndim_evolving)
-
-        n_samples = len(recent_static)
+    for idx, n in enumerate(N_steps):
+        taus_st[idx] = emcee.autocorr.integrated_time(chain_st[:n], tol=min_iters, quiet=True)
         
-        #rand_idx = np.random.choice(len(recent_static), size=n_samples, replace=False)
+        reshaped_ev = chain_ev[:n].transpose(0, 1, 2, 3).reshape(n, nwalkers * Nblocks, ndim_ev)
+        taus_ev[idx] = emcee.autocorr.integrated_time(reshaped_ev, tol=min_iters, quiet=True)
 
-        samp_st = recent_static#[rand_idx]
-        samp_ev = recent_evolving#[rand_idx]
+    fig_ac, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 10))
+    
+    for j in range(ndim_st): ax1.loglog(N_steps, taus_st[:, j], "b-", alpha=0.3)
+    ax1.loglog(N_steps, N_steps / 50.0, "--r", label=r"$\tau = N/50$")
+    ax1.set_title("Autocorrelations: Static Branch")
+    ax1.legend()
 
-        projected_t0_samples = []
+    for j in range(ndim_ev): ax2.loglog(N_steps, taus_ev[:, j], "g-", alpha=0.3)
+    ax2.loglog(N_steps, N_steps / 50.0, "--r")
+    ax2.set_title("Autocorrelations: Evolving Branch (Max across blocks)")
+    
+    fig_ac.tight_layout()
+    plt.savefig(os.path.join(out_dir, "autocorr.png"), dpi=300)
+    plt.close(fig_ac)
 
-        for j in range(n_samples):
-            for i in range(Nblocks):
-                T_backwards = (i * slice_length * dt) / YRSID_SI
+def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_ev, 
+                              true_pars_all, Nblocks, traj_config, out_dir):
+    """Evolves parameters backwards to t=0 and plots the joint posterior."""
+    nsteps = chain_st.shape[0]
+    if nsteps <= 100:
+        return
 
-                if T_backwards == 0.0:
-                    projected_t0_samples.append(list(samp_st[j]) + list(samp_ev[j,i,:]))
-                    continue
+    print("Evolving samples backwards to t=0 for joint posterior...")
+    
+    recent_st = chain_st[discard_idx:].reshape(-1, chain_st.shape[-1])
+    recent_ev = chain_ev[discard_idx:].reshape(-1, Nblocks, chain_ev.shape[-1])
+    n_samples = len(recent_st)
 
-                pars_block = np.zeros(len(pars_names))
-                pars_block[indices_static_in] = samp_st[j]
-                pars_block[indices_ev_in] = samp_ev[j, i, :]
-                pars_block[indices_static_fixed] = value_fixed_static
-                pars_block[indices_ev_fixed] = value_fixed_ev[i, :]
+    # Unpack config
+    dt, slice_len = traj_config["dt"], traj_config["slice_length"]
+    idx_st_in, idx_ev_in = traj_config["idx_st_in"], traj_config["idx_ev_in"]
+    idx_st_fix, idx_ev_fix = traj_config["idx_st_fix"], traj_config["idx_ev_fix"]
+    val_st_fix, val_ev_fix = traj_config["val_st_fix"], traj_config["val_ev_fix"]
+    kerr_traj = traj_config["kerr_traj_instance"]
+    traj_idx = traj_config["traj_indices"]
+    total_pars_len = traj_config["total_pars_len"]
 
-                traj_args = pars_block[traj_indices]
+    projected_t0_samples = []
 
-                try:
-                    traj_output = kerr_traj_instance(*traj_args[:-3], 
-                                                     Phi_phi0=-traj_args[-3], #negative sign for the final phases so it is handled correctly in FEW
-                                                     Phi_theta0=-traj_args[-2],
-                                                     Phi_r0=-traj_args[-1], 
-                                                     T=T_backwards, dt=dt, upsample=False, #upsample = False to get the final sample at exactly t=0.
-                                                     integrate_backwards=True)
-                    p0_proj = traj_output[1][-1]
-                    e0_proj = traj_output[2][-1]
-                    pp0_proj = -traj_output[4][0] % (2 * np.pi) #negative sign for phases so it is handled correctly in FEW, modulo for periodicity
-                    pr0_proj = -traj_output[6][0] % (2 * np.pi)
-                    
-                    proj_ev_sampled = [p0_proj, e0_proj, pp0_proj, pr0_proj]
-                    projected_t0_samples.append(list(samp_st[j]) + proj_ev_sampled)
-                except Exception:
-                    continue
+    for j in range(n_samples):
+        for i in range(Nblocks):
+            T_backwards = (i * slice_len * dt) / YRSID_SI
 
-        truths = [true_pars[i] for i in indices_static_in] + [true_pars[i] for i in indices_ev_in]
-        projected_t0_samples = np.array(projected_t0_samples)
+            if T_backwards == 0.0:
+                projected_t0_samples.append(list(recent_st[j]) + list(recent_ev[j, i, :]))
+                continue
 
-        if len(projected_t0_samples) > 0:
-            labels_t0 = static_in_names + ev_in_names
+            pars_block = np.zeros(total_pars_len)
+            pars_block[idx_st_in] = recent_st[j]
+            pars_block[idx_ev_in] = recent_ev[j, i, :]
+            pars_block[idx_st_fix] = val_st_fix
+            pars_block[idx_ev_fix] = val_ev_fix[i, :]
+
+            args = pars_block[traj_idx]
+
             try:
-                fig_t0 = corner.corner(projected_t0_samples, labels=labels_t0, truths=truths, show_titles=True)
-                plt.savefig(f"{diagnostics_dir}/corner_t0_projected.png", bbox_inches='tight', dpi=300)
-                plt.close(fig_t0)
-            except ValueError:
-                pass
+                traj_output = kerr_traj(
+                    *args[:-3], 
+                    Phi_phi0=-args[-3], Phi_theta0=-args[-2], Phi_r0=-args[-1], 
+                    T=T_backwards, dt=dt, upsample=False, integrate_backwards=True
+                )
+                
+                # FIX APPLIED: Extract from index 0 (t=0) and drop modulo to show true unwrapped phase variance
+                proj_ev = [
+                    traj_output[1][0],  # p0
+                    traj_output[2][0],  # e0
+                    -traj_output[4][0], # Phi_phi0
+                    -traj_output[6][0]  # Phi_r0
+                ]
+                projected_t0_samples.append(list(recent_st[j]) + proj_ev)
+            except Exception:
+                continue
+
+    if projected_t0_samples:
+        projected_t0_samples = np.array(projected_t0_samples)
+        try:
+            fig_t0 = corner.corner(
+                projected_t0_samples, labels=(names_st + names_ev), truths=true_pars_all, 
+                show_titles=True, quantiles=[0.16, 0.5, 0.84]
+            )
+            plt.savefig(os.path.join(out_dir, "corner_t0_projected.png"), dpi=300)
+            plt.close(fig_t0)
+        except ValueError as e:
+            print(f"Skipping projected corner plot: {e}")
+
+# ==========================================
+# MAIN WRAPPER FUNCTION
+# ==========================================
+def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, 
+                            static_in_names, ev_in_names,
+                            val_samp_st, val_samp_ev, true_pars_all, 
+                            traj_config, min_autocorr_iters=50):
+    """
+    Extract multi-branch chains, plot 1D walks, static posteriors, and t=0 projections.
+    
+    traj_config (dict): Contains all trajectory mapping parameters:
+        dt, slice_length, idx_st_in, idx_ev_in, idx_st_fix, idx_ev_fix, 
+        val_st_fix, val_ev_fix, kerr_traj_instance, traj_indices, total_pars_len.
+    """
+    print(f"\n[Step {sampler.iteration}] Generating diagnostic plots...")
+    os.makedirs(diagnostics_dir, exist_ok=True)
+
+    # Extract chains. Shape mappings:
+    # chain_static: (nsteps, nwalkers, ndim_static)
+    # chain_evolving: (nsteps, nwalkers, Nblocks, ndim_evolving)
+    chain_st = sampler.get_chain()["static"][:, 0, :, 0, :] 
+    chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :] 
+
+    # Discard the first 50% for corner plots and backwards evolution
+    discard_idx = int(chain_st.shape[0] * 0.5)
+
+    # 1. Static Branch Diagnostics
+    _plot_static_diagnostics(chain_st, static_in_names, val_samp_st, discard_idx, diagnostics_dir)
+
+    # 2. Evolving Branch Diagnostics
+    _plot_evolving_diagnostics(chain_ev, ev_in_names, val_samp_ev, discard_idx, Nblocks, diagnostics_dir)
+
+    # 3. Autocorrelation
+    _plot_autocorrelation(chain_st, chain_ev, diagnostics_dir, min_autocorr_iters)
+
+    # 4. Backward Projection to t=0
+    _plot_backward_projection(
+        chain_st, chain_ev, discard_idx, static_in_names, ev_in_names, 
+        true_pars_all, Nblocks, traj_config, diagnostics_dir
+    )
