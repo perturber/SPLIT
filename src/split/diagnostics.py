@@ -154,9 +154,9 @@ def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_e
                     "p0": traj_output[1][-1],
                     "e0": traj_output[2][-1],
                     "xI0": traj_output[3][-1],
-                    "Phi_phi0": -traj_output[4][0],
-                    "Phi_theta0": -traj_output[5][0],
-                    "Phi_r0": -traj_output[6][0]
+                    "Phi_phi0": -traj_output[4][0] % (2*np.pi),
+                    "Phi_theta0": -traj_output[5][0] % (2*np.pi),
+                    "Phi_r0": -traj_output[6][0] % (2*np.pi)
                 }
                 
                 # Dynamically extract only the actively sampled parameters in the correct order
