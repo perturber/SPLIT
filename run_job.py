@@ -11,9 +11,10 @@ if __name__ == '__main__':
     parser.add_argument('--emri', type=str, default='emri_config.json',
                         help="Path to the EMRI configuration JSON file.\n"
                         "Allowed keywords:\n"
-                        "  - Kerr Params: m1, m2, a, p0, e0, xI0, dist, qS, phiS, qK, phiK, Phi_phi0, Phi_theta0, Phi_r0\n"
+                        "  - EMRI Params: m1, m2, a, p0, e0, xI0, dist, qS, phiS, qK, phiK, Phi_phi0, Phi_theta0, Phi_r0\n"
                         "  - Observation: T, dt, desired_SNR\n"
-                        "  - Slicing/Masks: Nblocks, alpha_block, fmin, fmax\n"
+                        "  - Blocks: Nblocks, alpha_block\n"
+                        "  - Frequency mask: fmin, fmax\n"
                         "  - Likelihood/Prior: nu_like, nu_prior, sigma_prior")
     
     parser.add_argument('--samp', type=str, default='sample_config.json',
