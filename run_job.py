@@ -1,7 +1,6 @@
 import multiprocessing as mp
 import os
 import argparse
-from split import SPLIT
 
 if __name__ == '__main__':
     # Parse command line arguments
@@ -38,6 +37,8 @@ if __name__ == '__main__':
     os.makedirs(out_dir, exist_ok=True)
 
     # Initialize the Orchestrator with the JSON configuration files
+    from split import SPLIT
+
     sampler_pipeline = SPLIT(
         emri_config_path=args.emri,
         sample_config_path=args.samp,
