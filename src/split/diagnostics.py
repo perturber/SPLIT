@@ -21,7 +21,8 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, dt, slice_length,
     current_nsteps, nwalkers, ndim_static = chain_static.shape
     ndim_evolving = chain_evolving.shape[-1]
 
-    discard_idx = int(current_nsteps * 0.1)
+    # only work with the final 10% of each chain.
+    discard_idx = int(current_nsteps * 0.9)
 
     # Plot A1: Static Corner Plot
     flat_static = chain_static[discard_idx:].reshape(-1, ndim_static)
