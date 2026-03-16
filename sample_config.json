@@ -20,9 +20,10 @@
         "Phi_theta0"
     ],
     "moves": {
-        "GlobalStretch": 0.0,
         "BlockStretch": 0.5,
-        "BlockGaussian": 0.5
+        "BlockGaussian": 0.5,
+        "GlobalStretch": 0.0,
+        "BlockAdaptGaussian": 0.0
     },
     "jitter": 1e-5,
     "nwalkers": 98,
