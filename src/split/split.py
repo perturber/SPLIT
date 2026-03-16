@@ -527,7 +527,7 @@ class SPLIT:
             print(f"New chain initiated. File not found or empty. Creating: {new_filename}")
             backend = HDFBackend(new_filename)
             
-            jitter = 1e-5 #initial jitter for seeding walkers around true values
+            jitter = self.samp.get('jitter', 1e-5) #initial jitter for seeding walkers around true values
 
             # Create Static State
             coords_static = np.tile(val_samp_st, (ntemps, nwalkers, 1, 1))

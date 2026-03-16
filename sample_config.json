@@ -24,6 +24,7 @@
         "BlockStretch": 0.5,
         "BlockGaussian": 0.5
     },
+    "jitter": 1e-5,
     "nwalkers": 98,
     "ntemps": 3,
     "nsteps": 100000,
