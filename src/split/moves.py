@@ -347,19 +347,23 @@ class SequentialBlockedGibbsStretchMove(RedBlueMove):
         return q, factors
     
 class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
-    def __init__(self, mode_factor=None, reg=1e-9, shared_state=None, **kwargs):
+    def __init__(self, mode_factor=None, burn_in_mode_factor=1e-4, burn_in_steps=1000, reg=1e-9, shared_state=None, **kwargs):
         """
         Custom RedBlueMove class for sequential adaptive updates of the
         evolving parameters (leaves) and hyper parameters (static branch).
         
         mode_factor (float): Scaling factor for the covariance. Defaults to the 
                              mathematically optimal (2.38^2 / d) for Random Walk.
+        burn_in_mode_factor (float): Heavily compressed scale for early exploration.
+        burn_in_steps (int): Number of MCMC iterations before switching to optimal scaling.
         reg (float): Small regularizer added to the diagonal to prevent matrix 
                      collapse during the very early burn-in steps.
         shared_state (SharedState): Object to synchronize the iteration step 
                                     across mixed moves.
         """
         self.mode_factor = mode_factor
+        self.burn_in_mode_factor = burn_in_mode_factor
+        self.burn_in_steps = burn_in_steps
         self.reg = reg
         self.shared_state = shared_state if shared_state is not None else SharedState()
         super().__init__(**kwargs)
@@ -390,6 +394,16 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
         # update the exact same block before moving to the next one!
         current_target = (self.shared_state.step // 2) % cycle_length
 
+        # Calculate the absolute MCMC iteration number
+        # 1 full iteration = (cycle_length) blocks * 2 (RedBlue half-sweeps)
+        current_mcmc_iteration = self.shared_state.step // (2 * cycle_length)
+
+        # Apply the Dynamic Schedule
+        if current_mcmc_iteration < self.burn_in_steps:
+            base_scale = self.burn_in_mode_factor
+        else:
+            base_scale = self.mode_factor if self.mode_factor is not None else (2.38 ** 2)
+
         factors = self.xp.zeros((ntemps, nactive))
 
         # The eigh method for multivariate_normal covariance is only available in CuPy.
@@ -397,7 +411,7 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
 
         if current_target == nleaves:
             # ---------------- STATIC UPDATE ----------------
-            scale = self.mode_factor if self.mode_factor is not None else (2.38 ** 2) / ndim_stat
+            scale = base_scale / ndim_stat
             x_c = c_stat[:, :, 0, :] # Extract complementary walkers
             
             for t in range(ntemps):
@@ -414,7 +428,7 @@ class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
         else:
             # ---------------- EVOLVING UPDATE ----------------
             leaf_idx = current_target
-            scale = self.mode_factor if self.mode_factor is not None else (2.38 ** 2) / ndim_evol
+            scale = base_scale / ndim_evol
             x_c = c_evol[:, :, leaf_idx, :]
             
             for t in range(ntemps):
