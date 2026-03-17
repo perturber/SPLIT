@@ -21,16 +21,18 @@
     ],
     "moves": {
         "BlockStretch": 0.5,
-        "BlockGaussian": 0.5,
+        "BlockGaussian": 0.0,
         "GlobalStretch": 0.0,
-        "BlockAdaptGaussian": 0.0
+        "BlockAdaptGaussian": 1.0
     },
+    "adapt_burn_steps":1000,
+    "burn_in_mode_factor": 1e-4,
     "jitter": 1e-5,
     "nwalkers": 98,
     "ntemps": 3,
     "nsteps": 100000,
     "check_interval": 100,
-    "burn": 100,
+    "burn": 1000,
     "thin_by": 1,
     "check_converge": true,
     "old_filename": null,

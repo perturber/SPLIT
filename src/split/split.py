@@ -600,7 +600,9 @@ class SPLIT:
             custom_adaptgauss_move = SequentialAdaptiveBlockedGibbsGaussianMove(
                 reg=1e-9,
                 use_gpu=self.use_gpu,
-                shared_state=master_state
+                shared_state=master_state,
+                burn_in_steps=self.samp.get("adapt_burn_steps", 1000),
+                burn_in_mode_factor=self.samp.get("burn_in_mode_factor", 1e-4)
             )
             mixed_moves.append((custom_adaptgauss_move, moves_dict["BlockAdaptGaussian"]))
 
