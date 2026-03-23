@@ -533,7 +533,17 @@ class SPLIT:
             coords_static = np.tile(val_samp_st, (ntemps, nwalkers, 1, 1))
             scale_st = np.abs(val_samp_st)
             scale_st[scale_st==0] = 1.0
-            coords_static += np.random.normal(0, scale_st * jitter, size=coords_static.shape)
+
+            # broader jitter for extrinsic parameters
+            extrinsic_names = ["dist", "qS", "phiS", "qK", "phiK"]
+
+            jitter_array_st = np.ones(len(self.samp['static_params'])) * jitter
+
+            for idx, param in enumerate(self.samp['static_params']):
+                if param in extrinsic_names:
+                    jitter_array_st[idx] = 1e-2 # fixed jitter for extrinsic parameters.
+
+            coords_static += np.random.normal(0, scale_st * jitter_array_st, size=coords_static.shape)
 
             # Force strict bounding so walkers do not start outside prior range
             for idx, param in enumerate(self.samp['static_params']):
@@ -556,7 +566,7 @@ class SPLIT:
 
         moves_dict = self.samp.get("moves", {
             "BlockStretch": 0.5, # sequential blocked Gibbs sampler with stretch moves.
-            "BlockGaussian": 0.5 # sequential blocked Gibbs sampler with Gauss moves and a fixed covariance kernel.
+            "BlockAdaptGaussian": 0.5 # sequential blocked Gibbs sampler with Gauss moves and an adaptive covariance kernel.
         })
 
         # Instantiate the shared step counter for sequential moves
