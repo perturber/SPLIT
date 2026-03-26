@@ -41,6 +41,7 @@ Currently available only for devices with GPUs and with CUDA drivers. Not compat
    git clone https://github.com/BlackHolePerturbationToolkit/FastEMRIWaveforms.git
    cd FastEMRIWaveforms
    git checkout v2.0.0
+   pip install -e '.[dev, testing]'
 
 ## Configuration Setup
 
