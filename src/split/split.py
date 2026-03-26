@@ -482,6 +482,15 @@ class SPLIT:
         os.makedirs(folder, exist_ok=True)
         os.makedirs(diagnostics, exist_ok=True)
 
+        updated_emri_path = os.path.join(folder, "emri_config.json")
+        updated_samp_path = os.path.join(folder, "sample_config.json")
+        
+        with open(updated_emri_path, 'w') as f:
+            json.dump(self.emri, f, indent=4)
+            
+        with open(updated_samp_path, 'w') as f:
+            json.dump(self.samp, f, indent=4)
+
         # 2. Map JSON string names to numeric indices for likelihood function
         indices_ev_in = [self.all_param_names.index(name) for name in self.samp['evolving_params']]
         indices_static_in = [self.all_param_names.index(name) for name in self.samp['static_params']]
@@ -535,7 +544,7 @@ class SPLIT:
             scale_st[scale_st==0] = 1.0
 
             # broader jitter for extrinsic parameters
-            extrinsic_names = ["dist", "qS", "phiS", "qK", "phiK"]
+            extrinsic_names = ["dist", "qS", "phiS", "qK", "phiK", "Phi_phi0", "Phi_theta0", "Phi_r0"]
 
             jitter_array_st = np.ones(len(self.samp['static_params'])) * jitter
 
@@ -554,7 +563,15 @@ class SPLIT:
             coords_evolving = np.tile(val_samp_ev, (ntemps, nwalkers, 1, 1))
             scale_ev = np.abs(val_samp_ev)
             scale_ev[scale_ev == 0] = 1.0
-            coords_evolving += np.random.normal(0, scale_ev * jitter, size=coords_evolving.shape)
+            
+            jitter_array_ev = np.ones(len(self.samp['evolving_params'])) * jitter
+
+            # Strict bounding on the phases
+            for idx, param in enumerate(self.samp['evolving_params']):
+                if param in extrinsic_names:
+                    jitter_array_ev[idx] = 1e-2
+
+            coords_evolving += np.random.normal(0, scale_ev * jitter_array_ev, size=coords_evolving.shape)
 
             for idx, param in enumerate(self.samp['evolving_params']):
                 low, high = self.bounds_dict[param]
