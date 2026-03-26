@@ -21,7 +21,7 @@ if __name__ == '__main__':
                         help="Path to the sampling configuration JSON file.\n"
                              "Allowed keywords:\n"
                              "  - Param Buckets: evolving_params, static_params, fixed_evolving\n"
-                             "  - Sampler Setup: jitter, nwalkers, ntemps, nsteps, burn, thin_by\n"
+                             "  - Sampler Setup: jitter, nwalkers, ntemps, nsteps, burn, thin_by, discard\n"
                              "  - Logistics: check_interval, check_converge\n"
                              "  - Moves: moves, adapt_burn_steps, burn_in_mode_factor\n"
                              "  - File I/O: filename (or new_filename), old_filename")
