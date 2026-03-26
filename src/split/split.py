@@ -482,12 +482,15 @@ class SPLIT:
         os.makedirs(folder, exist_ok=True)
         os.makedirs(diagnostics, exist_ok=True)
 
-        updated_emri_path = os.path.join(folder, "emri_config.json")
-        updated_samp_path = os.path.join(folder, "sample_config.json")
+        updated_emri_path = os.path.join(folder, "emri_config_log.json")
+        updated_samp_path = os.path.join(folder, "sample_config_log.json")
         
         with open(updated_emri_path, 'w') as f:
             json.dump(self.emri, f, indent=4)
-            
+
+        # Add the exact slice_length calculated during injection generation
+        self.samp['slice_length'] = int(self.slice_length)
+        
         with open(updated_samp_path, 'w') as f:
             json.dump(self.samp, f, indent=4)
 
@@ -719,7 +722,8 @@ class SPLIT:
                         val_samp_ev=val_samp_ev, 
                         true_pars_all=self.true_pars, 
                         traj_config=traj_config, 
-                        min_autocorr_iters=min_autocorr_iters
+                        min_autocorr_iters=min_autocorr_iters,
+                        discard_frac=self.samp.get('discard',0.5)
                     )
 
                     # get the lowest temperature chains by setting axis=1 index to 0

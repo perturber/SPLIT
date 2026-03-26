@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import emcee
 import corner
 from few.utils.constants import YRSID_SI
+from tqdm import tqdm
 
 def _plot_static_diagnostics(chain, names, truths, discard_idx, out_dir):
     """Plots 1D walks and corner plots for the static branch."""
@@ -127,7 +128,7 @@ def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_e
 
     projected_t0_samples = []
 
-    for j in range(n_samples):
+    for j in tqdm(range(n_samples),desc='backwards projection'):
         for i in range(Nblocks):
             T_backwards = (i * slice_len * dt) / YRSID_SI
 
@@ -187,7 +188,7 @@ def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_e
 def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, 
                             static_in_names, ev_in_names,
                             val_samp_st, val_samp_ev, true_pars_all, 
-                            traj_config, min_autocorr_iters=50):
+                            traj_config, min_autocorr_iters=50, discard_frac=0.5):
     """
     Extract multi-branch chains, plot 1D walks, static posteriors, and t=0 projections.
     
@@ -205,7 +206,7 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks,
     chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :] 
 
     # Discard the first 50% for corner plots and backwards evolution
-    discard_idx = int(chain_st.shape[0] * 0.5)
+    discard_idx = int(chain_st.shape[0] * discard_frac)
 
     # 1. Static Branch Diagnostics
     _plot_static_diagnostics(chain_st, static_in_names, val_samp_st, discard_idx, diagnostics_dir)
