@@ -82,7 +82,7 @@ def init_worker(d_fft_cpu, PSD_cpu, freq_mask_cpu, Tobs_block_padded, dt, tdi_kw
         return_list=False
     )
     
-    # 4. Build the 10 ResponseWrappers natively on THIS GPU
+    # 4. Build the Nblocks ResponseWrappers natively on THIS GPU
     worker_resp_blocks = []
     for i in range(Nblocks):
         t_shift_seconds = i * slice_length * dt
@@ -101,6 +101,7 @@ def init_worker(d_fft_cpu, PSD_cpu, freq_mask_cpu, Tobs_block_padded, dt, tdi_kw
             flip_hx=True,
             is_ecliptic_latitude=False,
             remove_garbage=True, 
+            force_backend=force_backend,
             **tdi_kwargs_block,
         )
         worker_resp_blocks.append(resp_block)
@@ -264,7 +265,7 @@ class SPLIT:
             t_buffer=self.t_buffer, t0=self.t0, flip_hx=True,
             is_ecliptic_latitude=False, remove_garbage=True,
             orbits=EqualArmlengthOrbits(), order=self.order, tdi=self.tdi_gen,
-            tdi_chan="AE"
+            tdi_chan="AE",force_backend=force_backend
         )
 
         #correctly windowed data to accurately calculate 1-year SNR
