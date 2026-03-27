@@ -69,4 +69,4 @@ The SPLIT orchestrator runs by ingesting two distinct JSON configuration files:
    ```bash
    python run_job.py -h
    
-4. To run a fully-coherent analysis, simply set `'Nblocks': 1` in `sample_config.json`.
+4. To run a fully-coherent analysis, simply set `'Nblocks': 1` in `emri_config.json`.
