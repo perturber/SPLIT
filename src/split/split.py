@@ -475,11 +475,11 @@ class SPLIT:
         new_file_input = self.samp.get('filename', self.samp.get('new_filename', "default_run.h5"))
         
         # Construct the full file paths (incorporating your exact naming convention)
-        new_filename = folder + f"{new_file_input}"
-        old_filename = folder + f"{old_file_input}" if old_file_input else None
+        new_filename = folder + f"sampler_{new_file_input}"
+        old_filename = folder + f"sampler_{old_file_input}" if old_file_input else None
 
         #diagnostics folder always from new_filename
-        diagnostics = os.path.join(folder, f"diagnostics_T_{T}_nwalkers_{nwalkers}_ntemps_{ntemps}_{new_file_input}/")
+        diagnostics = os.path.join(folder, f"diagnostics_{new_file_input}/")
         os.makedirs(folder, exist_ok=True)
         os.makedirs(diagnostics, exist_ok=True)
 
