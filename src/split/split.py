@@ -31,9 +31,6 @@ from eryn.backends import HDFBackend
 #few imports
 from few.waveform import GenerateEMRIWaveform, FastKerrEccentricEquatorialFlux
 from few.utils.constants import YRSID_SI
-from few.trajectory.inspiral import EMRIInspiral
-from few.trajectory.ode import KerrEccEqFlux
-kerr_traj = EMRIInspiral(func=KerrEccEqFlux)
 
 #responsewrapper imports
 from fastlisaresponse import ResponseWrapper
@@ -296,6 +293,15 @@ class SPLIT:
             logger.info(f"setting the analysis model to {analysis_model}")
             self.analysis_func = analysis_model
 
+        # extract the trajectory module of the analysis waveform model
+        dummy_wave_gen = GenerateEMRIWaveform(
+            self.analysis_func,
+            inspiral_kwargs=dict(buffer_length=int(1e3)),
+            sum_kwargs=dict(pad_output=True),
+            return_list=False
+        )
+        self.analysis_traj = dummy_wave_gen.waveform_generator.inspiral_generator
+
     def generate_injection_data(self):
         """
         Generates the target waveform, scales it to the desired SNR, and processes it 
@@ -419,8 +425,7 @@ class SPLIT:
 
         logger.info("Initializing priors...")
         
-        kerr_traj = EMRIInspiral(func=KerrEccEqFlux)
-        t, p, e, x, pp, pt, pr = kerr_traj(
+        t, p, e, x, pp, pt, pr = self.analysis_traj(
             self.emri['m1'], self.emri['m2'], self.emri['a'], self.emri['p0'],
             self.emri['e0'], self.emri['xI0'], Phi_phi0=self.emri['Phi_phi0'],
             Phi_theta0=self.emri['Phi_theta0'], Phi_r0=self.emri['Phi_r0'],
@@ -510,7 +515,7 @@ class SPLIT:
                 emri_config=self.emri,
                 all_param_names=self.all_param_names,
                 true_evolving_dict=self.true_evolving_dict,
-                traj_instance=kerr_traj
+                traj_instance=self.analysis_traj
             )
         }
 
@@ -797,7 +802,7 @@ class SPLIT:
                         "idx_ev_fix": indices_ev_fixed,
                         "val_st_fix": value_fixed_static,
                         "val_ev_fix": value_fixed_ev,
-                        "kerr_traj_instance": kerr_traj,
+                        "kerr_traj_instance": self.analysis_traj,
                         "traj_indices": traj_indices,
                         "total_pars_len": len(self.all_param_names)
                     }
