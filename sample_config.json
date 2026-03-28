@@ -37,5 +37,5 @@
     "discard":0.5,
     "check_converge": true,
     "old_filename": null,
-    "filename": "PART1.h5"
+    "filename": "default_output.h5"
 }
