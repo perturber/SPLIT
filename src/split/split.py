@@ -97,12 +97,12 @@ def init_worker(d_fft_cpu, PSD_cpu, freq_mask_cpu, Tobs_block_padded, dt,
     # 4. Build the Nblocks ResponseWrappers natively on THIS GPU
     worker_resp_blocks = []
     for i in range(Nblocks):
-        t_shift_seconds = i * slice_length * dt
-        
-        tdi_kwargs_block = tdi_kwargs_base.copy()
-        tdi_kwargs_block["orbits"] = EqualArmlengthOrbits()
-        
         if use_response:
+            t_shift_seconds = i * slice_length * dt
+            
+            tdi_kwargs_block = tdi_kwargs_base.copy()
+            tdi_kwargs_block["orbits"] = EqualArmlengthOrbits()
+        
             resp_block = ResponseWrapper(
                 worker_wave_gen,
                 Tobs=Tobs_block_padded,
@@ -256,10 +256,13 @@ class SPLIT:
         data_model = self.emri.get('data_model', None)
         if (data_model is None) and (custom_injection_func is None):
             # Fall back to default
+            print(f"setting the data_model to default (FastKerrEccentricEquatorialFlux)...")
             self.data_func = FastKerrEccentricEquatorialFlux
         elif (data_model is None) and (custom_injection_func is not None):
+            print(f"setting the data_model to custom_injection_func...")
             self.data_func = custom_injection_func
         elif (data_model is not None) and (custom_injection_func is None):
+            print(f"setting the data_model to {data_model}...")
             self.data_func = data_model
         else:
             print("Both data_model and custom_injection_func provided. Choosing data_model for data generation...")
@@ -270,8 +273,10 @@ class SPLIT:
         if analysis_model is None:
             # if none provided, set it to be 
             # the same as the data model
+            print(f"analysis_model not provided; setting the analysis_model to data_model...")
             self.analysis_func = self.data_func
         else:
+            print(f"setting the analysis model to {analysis_model}")
             self.analysis_func = analysis_model
 
     def generate_injection_data(self):
