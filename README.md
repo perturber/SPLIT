@@ -50,6 +50,8 @@ The SPLIT orchestrator runs by ingesting two distinct JSON configuration files:
 1. `emri_config.json`: Controls the physical properties and the signal injection parameters. 
   * Defines fundamental parameters including `m1`, `m2`, `a`, `p0`, `e0`, and starting orientations, phases. 
   * Sets up the trajectory slice settings, dictating the total time `T` in years, number of blocks `Nblocks`, desired network SNR scaling, frequency bounds, and prior tolerance allowances `sigma_prior`. 
+  * **Model Specification:** Controls the waveform generator used for data injection (`data_model`) and the template used for inference (`analysis_model`). These natively accept standard FEW string identifiers (e.g., `"FastKerrEccentricEquatorialFlux"`). You can also inject purely custom environmental/glitch waveforms via code while recovering with vacuum GR. The user can also supply additional arguments for the custom waveform model using `"add_args"`. 
+  * **Response Wrapper:** Allows toggling the LISA instrument response simulation via the `"response"` boolean flag. If `false`, the pipeline defaults to evaluating raw strain using the Long-Wavelength Approximation (LWA) sensitivity curve.
 2. `sample_config.json`: Manage the Eryn MCMC sampler mechanics.
   * Assigns static and evolving parameters that should be inferred through `static_params` and `evolving_params`, respectively.
   * Assigns the set of fixed evolving parameters through `fixed_evolving` and automatically assigns any remaining model parameters to `fixed_static`. 
