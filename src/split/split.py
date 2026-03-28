@@ -596,7 +596,7 @@ class SPLIT:
         except Exception as e:
             # start afresh if either of the above two conditions fail.
             resume = False
-            print(f"Resume run failed with Exception {e}")
+            print(f"Resume run failed with exception: '{e}'")
             print(f"New chain initiated. File not found or empty. Creating: {new_filename}")
             backend = HDFBackend(new_filename)
             
