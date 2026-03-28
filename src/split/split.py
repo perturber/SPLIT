@@ -5,6 +5,21 @@ import json
 import os
 import emcee
 import multiprocessing as mp
+import logging
+
+# --- Setup SPLIT Logger ---
+logger = logging.getLogger("SPLIT")
+logger.setLevel(logging.INFO)
+
+# Create console handler and set format
+if not logger.hasHandlers():
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    # This format gives you: [YYYY-MM-DD HH:MM:SS] - SPLIT - INFO - Message
+    formatter = logging.Formatter('[%(asctime)s] - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+# --------------------------
 
 #eryn imports
 from eryn.ensemble import EnsembleSampler
@@ -235,13 +250,13 @@ class SPLIT:
         if self.response:
             # use TDI 1st generation AE channels
             # Hardcoded for now.
-            print("noise PSD: response=True; initializing with TDI 1st gen A and E channels...")
+            logger.info("noise PSD: response=True; initializing with TDI 1st gen A and E channels...")
             self.channels = [A1TDISens,E1TDISens]
             self.noise_kwargs = [{"sens_fn": c} for c in self.channels]
             self.noise_model = get_sensitivity
         else:
             #use the long-wavelength approximation
-            print("noise PSD: response=False; initializing with LWA I and II channels...")
+            logger.info("noise PSD: response=False; initializing with LWA I and II channels...")
             self.channels = ['I','II']
             self.noise_kwargs = [{} for c in self.channels]
             self.noise_model = sensitivity_LWA 
@@ -258,16 +273,16 @@ class SPLIT:
         data_model = self.emri.get('data_model', None)
         if (data_model is None) and (custom_injection_func is None):
             # Fall back to default
-            print(f"setting the data_model to default (FastKerrEccentricEquatorialFlux)...")
+            logger.info("setting the data_model to default (FastKerrEccentricEquatorialFlux)...")
             self.data_func = FastKerrEccentricEquatorialFlux
         elif (data_model is None) and (custom_injection_func is not None):
-            print(f"setting the data_model to custom_injection_func...")
+            logger.info("setting the data_model to custom_injection_func...")
             self.data_func = custom_injection_func
         elif (data_model is not None) and (custom_injection_func is None):
-            print(f"setting the data_model to {data_model}...")
+            logger.info(f"setting the data_model to {data_model}...")
             self.data_func = data_model
         else:
-            print("Both data_model and custom_injection_func provided. Choosing data_model for data generation...")
+            logger.warning("Both data_model and custom_injection_func provided. Choosing data_model for data generation...")
             self.data_func = data_model
 
         # analysis_model used for inference
@@ -275,10 +290,10 @@ class SPLIT:
         if analysis_model is None:
             # if none provided, set it to be 
             # the same as the data model
-            print(f"analysis_model not provided; setting the analysis_model to data_model...")
+            logger.warning("analysis_model not provided; setting the analysis_model to data_model...")
             self.analysis_func = self.data_func
         else:
-            print(f"setting the analysis model to {analysis_model}")
+            logger.info(f"setting the analysis model to {analysis_model}")
             self.analysis_func = analysis_model
 
     def generate_injection_data(self):
@@ -295,7 +310,7 @@ class SPLIT:
         6. Computing the frequency-domain FFTs and masked Noise PSDs for the workers.
         """
         
-        print("Generating waveform and scaling SNR...")
+        logger.info("Generating waveform and scaling SNR...")
 
         # if self.response is True, ResponseWrapper returns a list, 
         # but if not, FEW will not return a list by default
@@ -402,7 +417,7 @@ class SPLIT:
         (like phases) are properly registered.
         """
 
-        print("Initializing priors...")
+        logger.info("Initializing priors...")
         
         kerr_traj = EMRIInspiral(func=KerrEccEqFlux)
         t, p, e, x, pp, pt, pr = kerr_traj(
@@ -512,7 +527,7 @@ class SPLIT:
         6. Running the MCMC loop, checking Gelman-Rubin convergence, and saving diagnostic plots.
         """
 
-        print("Initializing sampler...")
+        logger.info("Initializing sampler...")
 
         # 1. Directory and File Management (Using your exact structure)
         nu = self.emri.get('nu_like', 5)
@@ -591,13 +606,13 @@ class SPLIT:
                 backend = HDFBackend(new_filename)
                 start_state = backend.get_last_sample()
                 resume = True
-            print(f"Resuming from saved state. Writing to: {new_filename}")
+            logger.info(f"Resuming from saved state. Writing to: {new_filename}")
 
         except Exception as e:
             # start afresh if either of the above two conditions fail.
             resume = False
-            print(f"Resume run failed with exception: '{e}'")
-            print(f"New chain initiated. File not found or empty. Creating: {new_filename}")
+            logger.warning(f"Resume run failed with exception: '{e}'")
+            logger.info(f"New chain initiated. File not found or empty. Creating: {new_filename}")
             backend = HDFBackend(new_filename)
             
             jitter = self.samp.get('jitter', 1e-5) #initial jitter for seeding walkers around true values
@@ -699,7 +714,7 @@ class SPLIT:
 
         # 5. Initialize Multi-GPU pool
         num_processes = cp.cuda.runtime.getDeviceCount() * 2
-        print(f"Booting Eryn MCMC with {num_processes} workers...")
+        logger.info(f"Booting Eryn MCMC with {num_processes} workers...")
         ctx = mp.get_context("spawn") ### SEQUENTIAL CUPY ARRAY INITIALIZATION FOR WORKERS (to avoid GPU memory conflicts)
 
         T_block = self.emri['T']/Nblocks
@@ -755,15 +770,15 @@ class SPLIT:
             traj_param_names = ["m1", "m2", "a", "p0", "e0", "xI0", "Phi_phi0", "Phi_theta0","Phi_r0"]
             traj_indices = [self.all_param_names.index(name) for name in traj_param_names]
 
-            print("Starting MCMC loop...")
+            logger.info("Starting MCMC loop...")
 
             current_state = start_state
 
             if burn > 0 and not resume:
-                print(f"Running burn-in steps...")
+                logger.info("Running burn-in steps...")
                 for burn_state in sampler.sample(current_state, iterations=burn, store=False, progress=True):
                     pass
-                print(f"Burn-in complete! Starting main run...")
+                logger.info("Burn-in complete! Starting main run...")
                 current_state = burn_state
 
             for sample in sampler.sample(current_state, iterations=nsteps, progress=True, thin_by=thin_by):
@@ -824,30 +839,30 @@ class SPLIT:
                     converged_tau = sampler.iteration > (50 * tau_est)
                     converged_r = np.all(np.nanmax(r_hat_st) < 1.05) and np.all(np.nanmax(r_hat_ev) < 1.05)
 
-                    ######### PRINT STATEMENTS ##############
-                    print("\n--- Sampler Status ---")
-                    print(f"Iteration: {sampler.iteration}")
-                    print(f"Max Gelman-Rubin (R-hat): Static = {np.nanmax(r_hat_st):.4f}, Evolving = {np.nanmax(r_hat_ev):.4f}")
-                    print(f"Estimated Autocorrelation Time (tau): {tau_est:.1f} steps")
+                    ######### LOGGER STATEMENTS ##############
+                    logger.info("--- Sampler Status ---")
+                    logger.info(f"Iteration: {sampler.iteration}")
+                    logger.info(f"Max Gelman-Rubin (R-hat): Static = {np.nanmax(r_hat_st):.4f}, Evolving = {np.nanmax(r_hat_ev):.4f}")
+                    logger.info(f"Estimated Autocorrelation Time (tau): {tau_est:.1f} steps")
 
                     ess_per_walker = sampler.iteration / tau_est
-                    print(f"Effective Sample Size per walker: ~{ess_per_walker:.1f}")
+                    logger.info(f"Effective Sample Size per walker: ~{ess_per_walker:.1f}")
 
-                    print("\n--- Acceptance Fractions by Move ---")
+                    logger.info("--- Acceptance Fractions by Move ---")
                     for i, (move, weight) in enumerate(zip(sampler.moves, sampler.weights)):
                         # move.acceptance_fraction is an array of shape (ntemps, nwalkers)
                         acc_frac_array = move.acceptance_fraction
                         mean_acc = np.mean(acc_frac_array)
-                        print(f"Move {i} ({move.__class__.__name__}) | Weight: {weight:.2f} | Mean Acceptance: {mean_acc:.4f}")
+                        logger.info(f"Move {i} ({move.__class__.__name__}) | Weight: {weight:.2f} | Mean Acceptance: {mean_acc:.4f}")
 
                     # The backend stores the total number of accepted jumps per walker
                     total_accepted = sampler.backend.accepted
                     global_acc_frac = total_accepted / sampler.backend.iteration
-                    print(f"Global Mean Acceptance Fraction: {np.mean(global_acc_frac):.4f}\n")
+                    logger.info(f"Global Mean Acceptance Fraction: {np.mean(global_acc_frac):.4f}")
                     #########################################
 
                     if self.samp.get("check_converge", True) and (converged_tau and converged_r):
-                        print(f"Convergence achieved at step {sampler.iteration}.")
+                        logger.info(f"Convergence achieved at step {sampler.iteration}.")
                         break
 
-            print("Run finished!")
+            logger.info("Run finished!")

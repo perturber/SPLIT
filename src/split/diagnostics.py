@@ -3,8 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import emcee
 import corner
+import logging
 from few.utils.constants import YRSID_SI
 from tqdm import tqdm
+
+# Request a child logger. It will automatically inherit settings from "SPLIT"
+logger = logging.getLogger("SPLIT.diagnostics")
 
 def _plot_static_diagnostics(chain, names, truths, discard_idx, out_dir):
     """Plots 1D walks and corner plots for the static branch."""
@@ -35,7 +39,7 @@ def _plot_static_diagnostics(chain, names, truths, discard_idx, out_dir):
         plt.savefig(os.path.join(out_dir, "corner_static.png"), dpi=300)
         plt.close(fig_corner)
     except ValueError as e:
-        print(f"Skipping static corner plot: {e}")
+        logger.warning(f"Skipping static corner plot: {e}")
 
 def _plot_evolving_diagnostics(chain, names, truths, discard_idx, Nblocks, out_dir):
     """Plots 1D walks and corner plots for each block in the evolving branch."""
@@ -69,7 +73,7 @@ def _plot_evolving_diagnostics(chain, names, truths, discard_idx, Nblocks, out_d
             plt.savefig(os.path.join(out_dir, f"corner_evolving_{i}.png"), dpi=300)
             plt.close(fig_corner)
         except ValueError as e:
-            print(f"Skipping evolving corner plot for block {i}: {e}")
+            logger.warning(f"Skipping evolving corner plot for block {i}: {e}")
 
 def _plot_autocorrelation(chain_st, chain_ev, out_dir, min_iters):
     """Plots the integrated autocorrelation time for both branches."""
@@ -111,7 +115,7 @@ def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_e
     if nsteps <= 100:
         return
 
-    print("Evolving samples backwards to t=0 for joint posterior...")
+    logger.info("Evolving samples backwards to t=0 for joint posterior...")
     
     recent_st = chain_st[discard_idx:].reshape(-1, chain_st.shape[-1])
     recent_ev = chain_ev[discard_idx:].reshape(-1, Nblocks, chain_ev.shape[-1])
@@ -180,7 +184,7 @@ def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_e
             plt.savefig(os.path.join(out_dir, "corner_t0_projected.png"), dpi=300)
             plt.close(fig_t0)
         except ValueError as e:
-            print(f"Skipping projected corner plot: {e}")
+            logger.warning(f"Skipping projected corner plot: {e}")
 
 # ==========================================
 # MAIN WRAPPER FUNCTION
@@ -196,7 +200,7 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks,
         dt, slice_length, idx_st_in, idx_ev_in, idx_st_fix, idx_ev_fix, 
         val_st_fix, val_ev_fix, kerr_traj_instance, traj_indices, total_pars_len.
     """
-    print(f"\n[Step {sampler.iteration}] Generating diagnostic plots...")
+    logger.info(f"\n[Step {sampler.iteration}] Generating diagnostic plots...")
     os.makedirs(diagnostics_dir, exist_ok=True)
 
     # Extract chains. Shape mappings:
