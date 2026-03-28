@@ -27,6 +27,7 @@ from lisatools.sensitivity import get_sensitivity, A1TDISens, E1TDISens
 
 #utility tools from StableEMRIFisher
 from stableemrifisher.utils import tukey, generate_PSD, SNRcalc
+from stableemrifisher.noise import sensitivity_LWA
 
 from .moves import SequentialAdaptiveBlockedGibbsGaussianMove, SequentialBlockedGibbsStretchMove, SequentialBlockedGibbsGaussianMove, SharedState
 from .diagnostics import update_diagnostic_plots
@@ -51,12 +52,21 @@ worker_freq_mask = None
 worker_resp_blocks = None
 worker_gpu_id = None
 
-def init_worker(d_fft_cpu, PSD_cpu, freq_mask_cpu, Tobs_block_padded, dt, tdi_kwargs_base, Nblocks, slice_length, index_lambda, index_beta, t_buffer):
+def init_worker(d_fft_cpu, PSD_cpu, freq_mask_cpu, Tobs_block_padded, dt, 
+                Nblocks, slice_length, use_response, wave_gen_func, 
+                tdi_kwargs_base=None,  index_lambda=None, index_beta=None, t_buffer=None):
     """
     Initializes the completely isolated environment for each multiprocessing worker.
     Each worker gets its own GPU context, its own copy of the static data on that GPU, and its own set of ResponseWrapper instances built natively on that GPU.
     """
     global worker_gpu_id, worker_d_fft, worker_PSD, worker_freq_mask, worker_resp_blocks
+
+    # if use_response, tdi arguments must've been supplied
+    if use_response:
+        assert tdi_kwargs_base is not None, "tdi_kwargs_base must be supplied if use_response is True"
+        assert index_lambda is not None, "index_lambda must be supplied if use_response is True"
+        assert index_beta is not None, "index_beta must be supplied if use_response is True"
+        assert t_buffer is not None, "t_buffer must be supplied if use_response is True"
     
     # 1. Dynamically assign a GPU based on the worker's internal ID
     num_gpus = cp.cuda.runtime.getDeviceCount()
@@ -75,11 +85,13 @@ def init_worker(d_fft_cpu, PSD_cpu, freq_mask_cpu, Tobs_block_padded, dt, tdi_kw
     # this is for the block-specific calculations.
     inspiral_kwargs_worker = dict(buffer_length=int(1e3))
     sum_kwargs_worker = dict(pad_output=True)
+
+    return_list = ~(use_response)
     worker_wave_gen = GenerateEMRIWaveform(
-        FastKerrEccentricEquatorialFlux,
+        wave_gen_func,
         inspiral_kwargs=inspiral_kwargs_worker,
         sum_kwargs=sum_kwargs_worker,
-        return_list=False
+        return_list=return_list
     )
     
     # 4. Build the Nblocks ResponseWrappers natively on THIS GPU
@@ -90,21 +102,24 @@ def init_worker(d_fft_cpu, PSD_cpu, freq_mask_cpu, Tobs_block_padded, dt, tdi_kw
         tdi_kwargs_block = tdi_kwargs_base.copy()
         tdi_kwargs_block["orbits"] = EqualArmlengthOrbits()
         
-        resp_block = ResponseWrapper(
-            worker_wave_gen,
-            Tobs=Tobs_block_padded,
-            dt=dt,
-            index_lambda=index_lambda,
-            index_beta=index_beta,
-            t0=t_shift_seconds,
-            t_buffer=t_buffer,
-            flip_hx=True,
-            is_ecliptic_latitude=False,
-            remove_garbage=True, 
-            force_backend=force_backend,
-            **tdi_kwargs_block,
-        )
-        worker_resp_blocks.append(resp_block)
+        if use_response:
+            resp_block = ResponseWrapper(
+                worker_wave_gen,
+                Tobs=Tobs_block_padded,
+                dt=dt,
+                index_lambda=index_lambda,
+                index_beta=index_beta,
+                t0=t_shift_seconds,
+                t_buffer=t_buffer,
+                flip_hx=True,
+                is_ecliptic_latitude=False,
+                remove_garbage=True, 
+                force_backend=force_backend,
+                **tdi_kwargs_block,
+            )
+            worker_resp_blocks.append(resp_block)
+        else:
+            worker_resp_blocks.append(worker_wave_gen)
 
 def window_gen_block_worker(*pars, resp_instance, T, dt, slice_length, alpha=0.05):
     """Generates padded waveform, slices valid middle block, applies Tukey window."""
@@ -184,7 +199,7 @@ class SPLIT:
 
     Some choices, such as the Ensemble Sampler moves are currently baked in.
     """
-    def __init__(self, emri_config_path, sample_config_path, out_dir, custom_injection_func=None, additional_injection_args=None):
+    def __init__(self, emri_config_path, sample_config_path, out_dir, custom_injection_func=None):
 
         """
         Initializes the SPLIT pipeline by loading JSON configuration files, mapping 
@@ -200,8 +215,6 @@ class SPLIT:
             custom_injection_func (callable, optional): A custom FEW waveform generator 
                 for injecting modified or environmentally dirtied signals. If None, 
                 defaults to the standard vacuum FastKerrEccentricEquatorialFlux.
-            additional_injection_args (list, optional): Additional physical parameters 
-                required by the custom_injection_func beyond the standard 14 Kerr parameters.
         """
 
         #LOAD JSON configurations
@@ -217,14 +230,48 @@ class SPLIT:
         self.use_gpu = True
         self.xp = cp if self.use_gpu else np
         
-        self.channels = [A1TDISens,E1TDISens]
-        self.noise_kwargs = [{"sens_fn": c} for c in self.channels]
+        self.response = self.emri.get('response',True)
+
+        if self.response:
+            # use TDI 1st generation AE channels
+            # Hardcoded for now.
+            self.channels = [A1TDISens,E1TDISens]
+            self.noise_kwargs = [{"sens_fn": c} for c in self.channels]
+            self.noise_model = get_sensitivity
+        else:
+            #use the long-wavelength approximation
+            self.channels = ['I','II']
+            self.noise_kwargs = [{} for c in self.channels]
+            self.noise_model = sensitivity_LWA 
 
         self.all_param_names = ["m1", "m2", "a", "p0", "e0", "xI0", "dist", "qS", "phiS", "qK", "phiK", "Phi_phi0", "Phi_theta0", "Phi_r0"]
         self.true_pars = [self.emri.get(k, 0.0) for k in self.all_param_names]
+        
+        # additional arguments for the data generation model.
+        # In the future, this can be made more general and added
+        # to the analysis model as well.
+        self.add_args = self.emri.get('add_args', [])
 
-        self.custom_injection_func = custom_injection_func
-        self.add_args = additional_injection_args if additional_injection_args is not None else []
+        # data_model used for data generation
+        data_model = self.emri.get('data_model', None)
+        if (data_model is None) and (custom_injection_func is None):
+            # Fall back to default
+            self.data_func = FastKerrEccentricEquatorialFlux
+        elif (data_model is None) and (custom_injection_func is not None):
+            self.data_func = custom_injection_func
+        elif (data_model is not None) and (custom_injection_func is None):
+            self.data_func = data_model
+        else:
+            print("Both data_model and custom_injection_func provided. Choosing data_model for data generation...")
+            self.data_func = data_model
+
+        # analysis_model used for inference
+        analysis_model = self.emri.get('analysis_model', None)
+        if analysis_model is None:
+            # Fall back to default
+            self.analysis_func = FastKerrEccentricEquatorialFlux
+        else:
+            self.analysis_func = analysis_model
 
     def generate_injection_data(self):
         """
@@ -242,34 +289,38 @@ class SPLIT:
         
         print("Generating waveform and scaling SNR...")
 
-        base_func = self.custom_injection_func if self.custom_injection_func is not None else FastKerrEccentricEquatorialFlux
-
+        # if self.response is True, ResponseWrapper returns a list, 
+        # but if not, FEW will not return a list by default
+        return_list = ~(self.response)
         wave_gen = GenerateEMRIWaveform(
-            base_func,
+            self.data_func,
             inspiral_kwargs=dict(buffer_length=int(1e3)),
             sum_kwargs=dict(pad_output=True),
-            return_list=False
+            return_list=return_list
         )
 
-        self.t0 = 0.0 #initial time for response calculation
-        self.t_buffer = 10000.0 #time for garbage orbit removal
-    
-        self.order = 25 
-        self.tdi_gen = "1st generation" 
-        self.index_lambda = 8 
-        self.index_beta = 7 
+        if self.response:
+            self.t0 = 0.0 #initial time for response calculation
+            self.t_buffer = 10000.0 #time for garbage orbit removal
+        
+            self.order = 25 
+            self.tdi_gen = "1st generation" 
+            self.index_lambda = 8 
+            self.index_beta = 7 
 
-        resp_gen = ResponseWrapper(
-            wave_gen, Tobs=self.emri['T'], dt=self.emri['dt'],
-            index_lambda=self.index_lambda, index_beta=self.index_beta,
-            t_buffer=self.t_buffer, t0=self.t0, flip_hx=True,
-            is_ecliptic_latitude=False, remove_garbage=True,
-            orbits=EqualArmlengthOrbits(), order=self.order, tdi=self.tdi_gen,
-            tdi_chan="AE",force_backend=force_backend
-        )
+            waveform_generator = ResponseWrapper(
+                wave_gen, Tobs=self.emri['T'], dt=self.emri['dt'],
+                index_lambda=self.index_lambda, index_beta=self.index_beta,
+                t_buffer=self.t_buffer, t0=self.t0, flip_hx=True,
+                is_ecliptic_latitude=False, remove_garbage=True,
+                orbits=EqualArmlengthOrbits(), order=self.order, tdi=self.tdi_gen,
+                tdi_chan="AE",force_backend=force_backend
+            )
+        else:
+            waveform_generator = wave_gen
 
         #correctly windowed data to accurately calculate 1-year SNR
-        d_windowed = self.xp.array(resp_gen(*self.true_pars, *self.add_args, T=self.emri['T'], dt=self.emri['dt']))
+        d_windowed = self.xp.array(waveform_generator(*self.true_pars, *self.add_args, T=self.emri['T'], dt=self.emri['dt']))
         N_finite = d_windowed.shape[-1]
         finite_window = self.xp.array(tukey(N_finite, alpha=self.emri['alpha_block'], use_gpu=self.use_gpu))
         d_windowed *= finite_window
@@ -288,7 +339,7 @@ class SPLIT:
         self.true_pars = [self.emri.get(k, 0.0) for k in self.all_param_names]
 
         # Generate raw data for slicing
-        d_raw = self.xp.atleast_2d(self.xp.array(resp_gen(*self.true_pars, *self.add_args, T=self.emri['T'], dt=self.emri['dt'])))
+        d_raw = self.xp.atleast_2d(self.xp.array(waveform_generator(*self.true_pars, *self.add_args, T=self.emri['T'], dt=self.emri['dt'])))
 
         n = len(d_raw[0])
         self.slice_length = int(np.ceil(n/self.emri['Nblocks']))
@@ -319,6 +370,7 @@ class SPLIT:
             self.freq_mask &= (valid_freqs <= fmax)
 
         freq_mask_xp = self.xp.array(self.freq_mask)
+
 
         PSD_coarse = generate_PSD(
             self.d_slices, 
@@ -642,11 +694,24 @@ class SPLIT:
         print(f"Booting Eryn MCMC with {num_processes} workers...")
         ctx = mp.get_context("spawn") ### SEQUENTIAL CUPY ARRAY INITIALIZATION FOR WORKERS (to avoid GPU memory conflicts)
 
-        tdi_kwargs_base = dict(order=25, tdi="1st generation", tdi_chan="AE")
         T_block = self.emri['T']/Nblocks
-        Tobs_block_padded = T_block + 2*(self.t_buffer/YRSID_SI)
         df = (self.slice_length * self.emri['dt']) ** -1
 
+        if self.response:
+            tdi_kwargs_base = dict(order=25, tdi="1st generation", tdi_chan="AE")
+            t_buffer_arg = self.t_buffer
+            index_lambda_arg = self.index_lambda
+            index_beta_arg = self.index_beta
+            # Must pad the observation time for garbage orbit removal
+            Tobs_block_padded = T_block + 2*(self.t_buffer/YRSID_SI)
+        else:
+            tdi_kwargs_base = None
+            t_buffer_arg = None
+            index_lambda_arg = None
+            index_beta_arg = None
+            # No response means no garbage orbits to chop off
+            Tobs_block_padded = T_block
+        
         with ctx.Pool(
             processes=num_processes,
             initializer=init_worker,
@@ -654,8 +719,10 @@ class SPLIT:
                 cp.asnumpy(self.d_fft_masked_xp), 
                 cp.asnumpy(self.PSD_masked_xp), 
                 cp.asnumpy(self.xp.array(self.freq_mask)), 
-                Tobs_block_padded, self.emri['dt'], tdi_kwargs_base, 
-                Nblocks, self.slice_length, self.index_lambda, self.index_beta, self.t_buffer
+                Tobs_block_padded, self.emri['dt'], 
+                Nblocks, self.slice_length, 
+                self.response, self.analysis_func,
+                tdi_kwargs_base, index_lambda_arg, index_beta_arg, t_buffer_arg
             )
         ) as pool:
             
