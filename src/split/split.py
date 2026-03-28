@@ -10,15 +10,15 @@ import logging
 # --- Setup SPLIT Logger ---
 logger = logging.getLogger("SPLIT")
 logger.setLevel(logging.INFO)
+logger.propagate = False
+if logger.handlers:
+    logger.handlers.clear()
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+formatter = logging.Formatter('%(message)s')
+ch.setFormatter(formatter)
 
-# Create console handler and set format
-if not logger.hasHandlers():
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-    # This format gives you: [YYYY-MM-DD HH:MM:SS] - SPLIT - INFO - Message
-    # formatter = logging.Formatter('[%(asctime)s] - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    # ch.setFormatter(formatter)
-    logger.addHandler(ch)
+logger.addHandler(ch)
 # --------------------------
 
 #eryn imports
