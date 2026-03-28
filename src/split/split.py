@@ -101,7 +101,7 @@ def init_worker(d_fft_cpu, PSD_cpu, freq_mask_cpu, Tobs_block_padded, dt,
     inspiral_kwargs_worker = dict(buffer_length=int(1e3))
     sum_kwargs_worker = dict(pad_output=True)
 
-    return_list = ~(use_response)
+    return_list = False if use_response else True
     worker_wave_gen = GenerateEMRIWaveform(
         wave_gen_func,
         inspiral_kwargs=inspiral_kwargs_worker,
@@ -314,7 +314,7 @@ class SPLIT:
 
         # if self.response is True, ResponseWrapper returns a list, 
         # but if not, FEW will not return a list by default
-        return_list = ~(self.response)
+        return_list = False if self.response else True
         wave_gen = GenerateEMRIWaveform(
             self.data_func,
             inspiral_kwargs=dict(buffer_length=int(1e3)),
