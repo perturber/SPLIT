@@ -16,8 +16,8 @@ if not logger.hasHandlers():
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
     # This format gives you: [YYYY-MM-DD HH:MM:SS] - SPLIT - INFO - Message
-    formatter = logging.Formatter('[%(asctime)s] - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    ch.setFormatter(formatter)
+    # formatter = logging.Formatter('[%(asctime)s] - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    # ch.setFormatter(formatter)
     logger.addHandler(ch)
 # --------------------------
 
