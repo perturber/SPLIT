@@ -268,8 +268,9 @@ class SPLIT:
         # analysis_model used for inference
         analysis_model = self.emri.get('analysis_model', None)
         if analysis_model is None:
-            # Fall back to default
-            self.analysis_func = FastKerrEccentricEquatorialFlux
+            # if none provided, set it to be 
+            # the same as the data model
+            self.analysis_func = self.data_func
         else:
             self.analysis_func = analysis_model
 
