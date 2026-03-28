@@ -235,11 +235,13 @@ class SPLIT:
         if self.response:
             # use TDI 1st generation AE channels
             # Hardcoded for now.
+            print("noise PSD: response=True; initializing with TDI 1st gen A and E channels...")
             self.channels = [A1TDISens,E1TDISens]
             self.noise_kwargs = [{"sens_fn": c} for c in self.channels]
             self.noise_model = get_sensitivity
         else:
             #use the long-wavelength approximation
+            print("noise PSD: response=False; initializing with LWA I and II channels...")
             self.channels = ['I','II']
             self.noise_kwargs = [{} for c in self.channels]
             self.noise_model = sensitivity_LWA 
