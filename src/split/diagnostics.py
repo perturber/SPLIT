@@ -10,7 +10,7 @@ from tqdm import tqdm
 # Request a child logger. It will automatically inherit settings from "SPLIT"
 logger = logging.getLogger("SPLIT.diagnostics")
 
-def _plot_static_diagnostics(chain, names, truths, discard_idx, out_dir):
+def _plot_static_diagnostics(chain, names, truths, discard_idx, out_dir, max_plot):
     """Plots 1D walks and corner plots for the static branch."""
     nsteps, nwalkers, ndim = chain.shape
     
@@ -31,6 +31,12 @@ def _plot_static_diagnostics(chain, names, truths, discard_idx, out_dir):
 
     # Corner Plot
     flat_chain = chain[discard_idx:].reshape(-1, ndim)
+
+    # Subsample if necessary
+    if max_plot is not None and len(flat_chain) > max_plot:
+        indices = np.random.choice(len(flat_chain), max_plot, replace=False)
+        flat_chain = flat_chain[indices]
+
     try:
         fig_corner = corner.corner(
             flat_chain, labels=names, truths=truths, 
@@ -41,7 +47,7 @@ def _plot_static_diagnostics(chain, names, truths, discard_idx, out_dir):
     except ValueError as e:
         logger.warning(f"Skipping static corner plot: {e}")
 
-def _plot_evolving_diagnostics(chain, names, truths, discard_idx, Nblocks, out_dir):
+def _plot_evolving_diagnostics(chain, names, truths, discard_idx, Nblocks, out_dir, max_plot):
     """Plots 1D walks and corner plots for each block in the evolving branch."""
     nsteps, nwalkers, _, ndim = chain.shape
 
@@ -65,6 +71,12 @@ def _plot_evolving_diagnostics(chain, names, truths, discard_idx, Nblocks, out_d
 
         # Corner Plot
         flat_chain = chain[discard_idx:, :, i, :].reshape(-1, ndim)
+
+        # Subsample if necessary
+        if max_plot is not None and len(flat_chain) > max_plot:
+            indices = np.random.choice(len(flat_chain), max_plot, replace=False)
+            flat_chain = flat_chain[indices]
+
         try:
             fig_corner = corner.corner(
                 flat_chain, labels=labels_i, truths=truths[i], 
@@ -109,7 +121,7 @@ def _plot_autocorrelation(chain_st, chain_ev, out_dir, min_iters):
     plt.close(fig_ac)
 
 def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_ev, 
-                              true_pars_all, Nblocks, traj_config, out_dir):
+                              true_pars_all, Nblocks, traj_config, out_dir, max_plot):
     """Evolves parameters backwards to t=0 and plots the joint posterior."""
     nsteps = chain_st.shape[0]
     if nsteps <= 100:
@@ -120,6 +132,13 @@ def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_e
     recent_st = chain_st[discard_idx:].reshape(-1, chain_st.shape[-1])
     recent_ev = chain_ev[discard_idx:].reshape(-1, Nblocks, chain_ev.shape[-1])
     n_samples = len(recent_st)
+
+    # Subsample to speed up trajectory integration and clean up the plot
+    if max_plot is not None and n_samples > max_plot:
+        indices = np.random.choice(n_samples, max_plot, replace=False)
+        recent_st = recent_st[indices]
+        recent_ev = recent_ev[indices]
+        n_samples = max_plot
 
     # Unpack config
     dt, slice_len = traj_config["dt"], traj_config["slice_length"]
@@ -192,7 +211,8 @@ def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_e
 def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks, 
                             static_in_names, ev_in_names,
                             val_samp_st, val_samp_ev, true_pars_all, 
-                            traj_config, min_autocorr_iters=50, discard_frac=0.5):
+                            traj_config, min_autocorr_iters=50, 
+                            discard_frac=0.5, max_plot=10000):
     """
     Extract multi-branch chains, plot 1D walks, static posteriors, and t=0 projections.
     
@@ -209,14 +229,14 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks,
     chain_st = sampler.get_chain()["static"][:, 0, :, 0, :] 
     chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :] 
 
-    # Discard the first 50% for corner plots and backwards evolution
+    # Discard the first discard_frac fraction for corner plots and backwards evolution
     discard_idx = int(chain_st.shape[0] * discard_frac)
 
     # 1. Static Branch Diagnostics
-    _plot_static_diagnostics(chain_st, static_in_names, val_samp_st, discard_idx, diagnostics_dir)
+    _plot_static_diagnostics(chain_st, static_in_names, val_samp_st, discard_idx, diagnostics_dir, max_plot)
 
     # 2. Evolving Branch Diagnostics
-    _plot_evolving_diagnostics(chain_ev, ev_in_names, val_samp_ev, discard_idx, Nblocks, diagnostics_dir)
+    _plot_evolving_diagnostics(chain_ev, ev_in_names, val_samp_ev, discard_idx, Nblocks, diagnostics_dir, max_plot)
 
     # 3. Autocorrelation
     _plot_autocorrelation(chain_st, chain_ev, diagnostics_dir, min_autocorr_iters)
@@ -224,5 +244,5 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks,
     # 4. Backward Projection to t=0
     _plot_backward_projection(
         chain_st, chain_ev, discard_idx, static_in_names, ev_in_names, 
-        true_pars_all, Nblocks, traj_config, diagnostics_dir
+        true_pars_all, Nblocks, traj_config, diagnostics_dir, max_plot
     )
