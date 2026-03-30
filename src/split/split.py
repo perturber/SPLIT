@@ -653,7 +653,7 @@ class SPLIT:
             # Strict bounding on the phases
             for idx, param in enumerate(self.samp['evolving_params']):
                 if param in extrinsic_names:
-                    jitter_array_ev[idx] = 1e-2
+                    jitter_array_ev[idx] = 1e-1
 
             coords_evolving += np.random.normal(0, scale_ev * jitter_array_ev, size=coords_evolving.shape)
 
