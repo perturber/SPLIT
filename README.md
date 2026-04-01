@@ -75,9 +75,6 @@ The SPLIT orchestrator runs by ingesting two distinct JSON configuration files:
 
 3. View all available command-line options and their descriptions using the help flag:
    ```bash
-   # using the python -m flag
    python -m split -h
-   # or explicitly
-   python run_job.py -h
    
 4. To run a fully-coherent analysis, simply set `'Nblocks': 1` in `emri_config.json`.
