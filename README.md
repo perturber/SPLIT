@@ -61,14 +61,23 @@ The SPLIT orchestrator runs by ingesting two distinct JSON configuration files:
 
 1. Simply run the `run_job.py` script directly from your terminal inside the conda environment. This script automatically handles the CUDA multiprocessing initialization and executes the main stages of the pipeline sequentially:
    ```bash
+   # after installation, you can run SPLIT using the python -m flag
+   python -m split
+   # or explicitly call the execution file
    python run_job.py
 
 2. You can specify custom configuration files and a custom output directory using command-line flags:
    ```bash
+   # using the python -m flag
+   python -m split --emri emri_config.json --samp sample_config.json --out SPLIT_Outputs
+   # or explicitly
    python run_job.py --emri emri_config.json --samp sample_config.json --out SPLIT_Outputs
 
 3. View all available command-line options and their descriptions using the help flag:
    ```bash
+   # using the python -m flag
+   python -m split -h
+   # or explicitly
    python run_job.py -h
    
 4. To run a fully-coherent analysis, simply set `'Nblocks': 1` in `emri_config.json`.

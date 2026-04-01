@@ -256,7 +256,8 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks,
     )
 
 def check_convergence(sampler, Nblocks, min_autocorr_iters=50, 
-                      gelmanrubin_threshold=1.05, variance_threshold=0.05):
+                      autocorr_threshold=50, gelmanrubin_threshold=1.05, 
+                      variance_threshold=0.05):
     """
     Evaluates sampler convergence via Autocorrelation (tau), Gelman-Rubin (R-hat), 
     and Ensemble Variance Growth. Logs all sampler statistics, including PT swaps.
@@ -264,11 +265,14 @@ def check_convergence(sampler, Nblocks, min_autocorr_iters=50,
     Returns:
         bool: True if all convergence criteria are met, False otherwise.
     """
+    # Helper to grab the backend whether we are in a live run or a standalone notebook
+    backend_obj = sampler.backend if hasattr(sampler, "backend") else sampler
+    current_iteration = backend_obj.iteration
+    
     logger.info("\n================ SAMPLER STATUS ================")
-    logger.info(f"Current Iteration: {sampler.iteration}")
+    logger.info(f"Current Iteration: {current_iteration}")
+    
     # Extract the T0 (coldest) chains
-    # chain_st shape: (nsteps, nwalkers, ndim_st)
-    # chain_ev shape: (nsteps, nwalkers, Nblocks, ndim_ev)
     chain_st = sampler.get_chain()["static"][:, 0, :, 0, :]
     chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :]
     
@@ -287,12 +291,12 @@ def check_convergence(sampler, Nblocks, min_autocorr_iters=50,
     max_r_st = np.nanmax(r_hat_st)
     max_r_ev = np.nanmax(r_hat_ev)
 
-    converged_tau = sampler.iteration > (50 * tau_est)
-    converged_r = (max_r_st < 1.05) and (max_r_ev < 1.05)
+    converged_tau = current_iteration > (autocorr_threshold * tau_est)
+    converged_r = (max_r_st < gelmanrubin_threshold) and (max_r_ev < gelmanrubin_threshold)
 
     logger.info(f"Max Gelman-Rubin (R-hat): Static = {max_r_st:.4f}, Evolving = {max_r_ev:.4f}")
-    logger.info(f"Estimated Autocorr Time (tau): {tau_est:.1f} steps (Needs < {sampler.iteration/50:.1f})")
-    logger.info(f"Effective Sample Size / walker: ~{sampler.iteration / tau_est:.1f}")
+    logger.info(f"Estimated Autocorr Time (tau): {tau_est:.1f} steps (Needs < {current_iteration/autocorr_threshold:.1f})")
+    logger.info(f"Effective Sample Size / walker: ~{current_iteration / tau_est:.1f}")
 
     # ---------------------------------------------------------
     # 2. Ensemble Variance Growth Check
@@ -329,8 +333,8 @@ def check_convergence(sampler, Nblocks, min_autocorr_iters=50,
     # 3. Parallel Tempering Swap Acceptance
     # ---------------------------------------------------------
     try:
-        accepted_swaps = sampler.backend.swaps_accepted
-        swap_acceptance_fraction = accepted_swaps / (sampler.iteration * nwalkers)
+        accepted_swaps = backend_obj.swaps_accepted
+        swap_acceptance_fraction = accepted_swaps / (current_iteration * nwalkers)
         swap_str = " | ".join([f"T{i}<->T{i+1}: {frac:.2%}" for i, frac in enumerate(swap_acceptance_fraction)])
         logger.info(f"PT Swap Rates: {swap_str}")
     except Exception:
@@ -340,12 +344,21 @@ def check_convergence(sampler, Nblocks, min_autocorr_iters=50,
     # 4. Move Acceptance Fractions
     # ---------------------------------------------------------
     logger.info("--- Move Acceptance Fractions ---")
-    for i, (move, weight) in enumerate(zip(sampler.moves, sampler.weights)):
-        mean_acc = np.mean(move.acceptance_fraction)
-        logger.info(f"  {move.__class__.__name__} (W: {weight:.2f}) -> {mean_acc:.4f}")
+    
+    # Only try to print detailed move stats if we are running the live EnsembleSampler
+    if hasattr(sampler, "moves") and hasattr(sampler, "weights"):
+        for i, (move, weight) in enumerate(zip(sampler.moves, sampler.weights)):
+            mean_acc = np.mean(move.acceptance_fraction)
+            logger.info(f"  {move.__class__.__name__} (W: {weight:.2f}) -> {mean_acc:.4f}")
+    else:
+        logger.info("  [Detailed move statistics unavailable in standalone backend]")
         
-    global_acc_frac = sampler.backend.accepted / sampler.iteration
-    logger.info(f"  Global Mean Acceptance: {np.mean(global_acc_frac):.4f}")
+    try:
+        global_acc_frac = backend_obj.accepted / current_iteration
+        logger.info(f"  Global Mean Acceptance: {np.mean(global_acc_frac):.4f}")
+    except Exception:
+        pass
+        
     logger.info("================================================\n")
 
     # Final Convergence Boolean
