@@ -46,9 +46,9 @@ if __name__ == '__main__':
         emri_config_path=args.emri,
         sample_config_path=args.samp,
         out_dir=out_dir
-    )
+    ) # you can provide a custom wavegen class and additional params here
     
     # Execute the three main stages of the pipeline sequentially
-    sampler_pipeline.generate_injection_data() # you can provide a custom wavegen class and additional params here
+    sampler_pipeline.generate_injection_data() 
     sampler_pipeline.build_priors()
     sampler_pipeline.run_sampler()
