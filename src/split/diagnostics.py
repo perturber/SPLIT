@@ -6,6 +6,7 @@ import corner
 import logging
 from few.utils.constants import YRSID_SI
 from tqdm import tqdm
+from .utils import compute_rhat
 
 # Request a child logger. It will automatically inherit settings from "SPLIT"
 logger = logging.getLogger("SPLIT.diagnostics")
@@ -253,3 +254,99 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks,
         true_pars_all, Nblocks, traj_config, diagnostics_dir, max_plot,
         corner_kwargs
     )
+
+def check_convergence(sampler, Nblocks, min_autocorr_iters=50, 
+                      gelmanrubin_threshold=1.05, variance_threshold=0.05):
+    """
+    Evaluates sampler convergence via Autocorrelation (tau), Gelman-Rubin (R-hat), 
+    and Ensemble Variance Growth. Logs all sampler statistics, including PT swaps.
+    
+    Returns:
+        bool: True if all convergence criteria are met, False otherwise.
+    """
+    logger.info("\n================ SAMPLER STATUS ================")
+    logger.info(f"Current Iteration: {sampler.iteration}")
+    # Extract the T0 (coldest) chains
+    # chain_st shape: (nsteps, nwalkers, ndim_st)
+    # chain_ev shape: (nsteps, nwalkers, Nblocks, ndim_ev)
+    chain_st = sampler.get_chain()["static"][:, 0, :, 0, :]
+    chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :]
+    
+    nsteps, nwalkers, _ = chain_st.shape
+
+    # ---------------------------------------------------------
+    # 1. Gelman-Rubin (R-hat) & Autocorrelation (Tau)
+    # ---------------------------------------------------------
+    tau_st = emcee.autocorr.integrated_time(chain_st, tol=min_autocorr_iters, quiet=True)
+    tau_ev_blocks = [emcee.autocorr.integrated_time(chain_ev[:, :, i, :], tol=min_autocorr_iters, quiet=True) for i in range(Nblocks)]
+    
+    tau_est = max(np.nanmax(tau_st), np.nanmax(tau_ev_blocks))
+    
+    r_hat_st = compute_rhat(chain_st)
+    r_hat_ev = np.array([compute_rhat(chain_ev[:, :, i, :]) for i in range(Nblocks)])
+    max_r_st = np.nanmax(r_hat_st)
+    max_r_ev = np.nanmax(r_hat_ev)
+
+    converged_tau = sampler.iteration > (50 * tau_est)
+    converged_r = (max_r_st < 1.05) and (max_r_ev < 1.05)
+
+    logger.info(f"Max Gelman-Rubin (R-hat): Static = {max_r_st:.4f}, Evolving = {max_r_ev:.4f}")
+    logger.info(f"Estimated Autocorr Time (tau): {tau_est:.1f} steps (Needs < {sampler.iteration/50:.1f})")
+    logger.info(f"Effective Sample Size / walker: ~{sampler.iteration / tau_est:.1f}")
+
+    # ---------------------------------------------------------
+    # 2. Ensemble Variance Growth Check
+    # ---------------------------------------------------------
+    window = min(500, nsteps // 4) 
+    
+    if window < 10:
+        logger.info(f"Variance Growth: Chain too short ({nsteps} steps) for meaningful check.")
+        converged_variance = False
+    else:
+        # Static Growth
+        recent_st = chain_st[-window:]
+        older_st = chain_st[-2*window : -window]
+        std_recent_st = np.std(recent_st, axis=(0, 1))
+        std_older_st = np.std(older_st, axis=(0, 1))
+        growth_st = (std_recent_st - std_older_st) / (std_older_st + 1e-12)
+        
+        # Evolving Growth
+        recent_ev = chain_ev[-window:]
+        older_ev = chain_ev[-2*window : -window]
+        std_recent_ev = np.std(recent_ev, axis=(0, 1))
+        std_older_ev = np.std(older_ev, axis=(0, 1))
+        growth_ev = (std_recent_ev - std_older_ev) / (std_older_ev + 1e-12)
+        
+        max_total_growth = max(np.nanmax(growth_st), np.nanmax(growth_ev))
+        converged_variance = max_total_growth < variance_threshold
+        
+        if not converged_variance:
+            logger.info(f"Variance Growth: EXPANDING (Max Growth: {max_total_growth:.2%})")
+        else:
+            logger.info(f"Variance Growth: STABILIZED (Max Growth: {max_total_growth:.2%})")
+
+    # ---------------------------------------------------------
+    # 3. Parallel Tempering Swap Acceptance
+    # ---------------------------------------------------------
+    try:
+        accepted_swaps = sampler.backend.swaps_accepted
+        swap_acceptance_fraction = accepted_swaps / (sampler.iteration * nwalkers)
+        swap_str = " | ".join([f"T{i}<->T{i+1}: {frac:.2%}" for i, frac in enumerate(swap_acceptance_fraction)])
+        logger.info(f"PT Swap Rates: {swap_str}")
+    except Exception:
+        logger.info("PT Swap Rates: N/A (Single temperature or tracking disabled)")
+
+    # ---------------------------------------------------------
+    # 4. Move Acceptance Fractions
+    # ---------------------------------------------------------
+    logger.info("--- Move Acceptance Fractions ---")
+    for i, (move, weight) in enumerate(zip(sampler.moves, sampler.weights)):
+        mean_acc = np.mean(move.acceptance_fraction)
+        logger.info(f"  {move.__class__.__name__} (W: {weight:.2f}) -> {mean_acc:.4f}")
+        
+    global_acc_frac = sampler.backend.accepted / sampler.iteration
+    logger.info(f"  Global Mean Acceptance: {np.mean(global_acc_frac):.4f}")
+    logger.info("================================================\n")
+
+    # Final Convergence Boolean
+    return converged_tau and converged_r and converged_variance

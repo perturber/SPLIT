@@ -42,7 +42,7 @@ from stableemrifisher.utils import tukey, generate_PSD, SNRcalc
 from stableemrifisher.noise import sensitivity_LWA
 
 from .moves import SequentialAdaptiveBlockedGibbsGaussianMove, SequentialBlockedGibbsStretchMove, SequentialBlockedGibbsGaussianMove, SharedState
-from .diagnostics import update_diagnostic_plots
+from .diagnostics import update_diagnostic_plots, check_convergence
 from .priors import MarkovStudenttPrior
 from .utils import compute_rhat
 
@@ -822,52 +822,16 @@ class SPLIT:
                         discard_frac=self.samp.get('discard',0.5)
                     )
 
-                    # get the lowest temperature chains by setting axis=1 index to 0
-                    chain_st = sampler.get_chain()["static"][:, 0, :, 0, :] #chain_st has shape (nsteps, nwalkers, ndim)
-                    chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :] #chain_ev has shape (nsteps, nwalkers, Nblocks, ndim)
-                    
-                    #quiet = True ensures that an AutocorrError is not thrown if Niter too small for tau estimate.
-                    tau_st = emcee.autocorr.integrated_time(chain_st, tol=min_autocorr_iters, quiet=True)
-                    # Calculate tau for each block independently!
-                    tau_ev_blocks = []
-                    for i in range(Nblocks):
-                        tau_b = emcee.autocorr.integrated_time(chain_ev[:, :, i, :], tol=min_autocorr_iters, quiet=True)
-                        tau_ev_blocks.append(tau_b)
-                    tau_ev = np.array(tau_ev_blocks)
+                    # 3. Call the convergence check function
+                    is_converged = check_convergence(
+                        sampler=sampler,
+                        Nblocks=Nblocks,
+                        min_autocorr_iters=min_autocorr_iters,
+                        gelmanrubin_threshold=1.05,
+                        variance_threshold=0.05
+                    )
 
-                    tau_est = max(np.nanmax(tau_st), np.nanmax(tau_ev))
-                    
-                    r_hat_st = compute_rhat(chain_st)
-                    r_hat_ev = np.array([compute_rhat(chain_ev[:, :, i, :]) for i in range(Nblocks)])
-
-                    #convergence criterion.
-                    converged_tau = sampler.iteration > (50 * tau_est)
-                    converged_r = np.all(np.nanmax(r_hat_st) < 1.05) and np.all(np.nanmax(r_hat_ev) < 1.05)
-
-                    ######### LOGGER STATEMENTS ##############
-                    logger.info("--- Sampler Status ---")
-                    logger.info(f"Iteration: {sampler.iteration}")
-                    logger.info(f"Max Gelman-Rubin (R-hat): Static = {np.nanmax(r_hat_st):.4f}, Evolving = {np.nanmax(r_hat_ev):.4f}")
-                    logger.info(f"Estimated Autocorrelation Time (tau): {tau_est:.1f} steps")
-
-                    ess_per_walker = sampler.iteration / tau_est
-                    logger.info(f"Effective Sample Size per walker: ~{ess_per_walker:.1f}")
-
-                    logger.info("--- Acceptance Fractions by Move ---")
-                    for i, (move, weight) in enumerate(zip(sampler.moves, sampler.weights)):
-                        # move.acceptance_fraction is an array of shape (ntemps, nwalkers)
-                        acc_frac_array = move.acceptance_fraction
-                        mean_acc = np.mean(acc_frac_array)
-                        logger.info(f"Move {i} ({move.__class__.__name__}) | Weight: {weight:.2f} | Mean Acceptance: {mean_acc:.4f}")
-
-                    # The backend stores the total number of accepted jumps per walker
-                    total_accepted = sampler.backend.accepted
-                    global_acc_frac = total_accepted / sampler.backend.iteration
-                    logger.info(f"Global Mean Acceptance Fraction: {np.mean(global_acc_frac):.4f}")
-                    #########################################
-
-                    if self.samp.get("check_converge", True) and (converged_tau and converged_r):
-                        logger.info(f"Convergence achieved at step {sampler.iteration}.")
-                        break
+                    if self.samp.get("check_converge", True) and is_converged:
+                        logger.info(f"Convergence achieved at step {sampler.iteration}!")
 
             logger.info("Run finished!")
