@@ -13,7 +13,7 @@ SPLIT exploits the physical hierarchy of the system by decomposing the parameter
 * **Automated Diagnostics**: Tracks Gelmman-Rubin convergence and autocorrelation times natively, and automatically produces comprehensive diagnostic plots for the block-level evolving parameters, static parameters, and the joint parameter set projected at t=0.
 
 ## Compatibility
-Currently implemented only for extreme-mass-ration inspirals (EMRIs) in the LISA band using the `FastEMRIWaveforms(FEW)` package. Also only for devices with GPUs and with CUDA drivers. Not compatible with CPUs; CPU evaluation of N blocks will likely be prohibitively expensive anyway.
+Currently implemented only for extreme-mass-ratio inspirals (EMRIs) in the LISA band using the `FastEMRIWaveforms(FEW)` package. Also only for devices with GPUs and with CUDA drivers. Not compatible with CPUs; CPU evaluation of N blocks will likely be prohibitively expensive anyway.
 
 ## Installation Guide
 0. **It is advisable to work in a conda environment:**
