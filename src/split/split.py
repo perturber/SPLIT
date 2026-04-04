@@ -29,7 +29,7 @@ from eryn.moves import StretchMove
 from eryn.backends import HDFBackend
 
 #few imports
-from few.waveform import GenerateEMRIWaveform, FastKerrEccentricEquatorialFlux
+from few.waveform import GenerateEMRIWaveform, Pn5AAKWaveform
 from few.utils.constants import YRSID_SI
 
 #responsewrapper imports
@@ -270,8 +270,8 @@ class SPLIT:
         data_model = self.emri.get('data_model', None)
         if (data_model is None) and (custom_injection_func is None):
             # Fall back to default
-            logger.info("setting the data_model to default (FastKerrEccentricEquatorialFlux)...")
-            self.data_func = FastKerrEccentricEquatorialFlux
+            logger.info("setting the data_model to default (Pn5AAK)...")
+            self.data_func = Pn5AAKWaveform
         elif (data_model is None) and (custom_injection_func is not None):
             logger.info("setting the data_model to custom_injection_func...")
             self.data_func = custom_injection_func
@@ -355,12 +355,14 @@ class SPLIT:
         d_windowed *= finite_window
 
         PSD_full = generate_PSD(
-            d_windowed, dt=self.emri['dt'], 
-            noise_PSD=get_sensitivity, 
-            channels=self.channels, 
-            noise_kwargs=self.noise_kwargs, 
+            d_windowed,
+            dt=self.emri['dt'],
+            noise_PSD=get_sensitivity,
+            channels=self.channels,
+            noise_kwargs=self.noise_kwargs,
             use_gpu=self.use_gpu
         )
+
         current_SNR = SNRcalc(d_windowed, PSD_full, self.emri['dt'], use_gpu=self.use_gpu)
 
         # distance scaling
@@ -371,6 +373,46 @@ class SPLIT:
         d_raw = self.xp.atleast_2d(self.xp.array(waveform_generator(*self.true_pars, *self.add_args, T=self.emri['T'], dt=self.emri['dt'])))
 
         n = len(d_raw[0])
+
+        # =========================================
+        # ---- Add Gaussian Noise if Requested ----
+        # =========================================
+        if self.emri.get("add_noise", False):
+            logger.info("Generating and injecting Gaussian noise...")
+
+            seed = self.emri.get('rng_seed', None)
+            rng = self.xp.random.default_rng(seed)
+
+            # Obtain noise variance from the one-sided PSD
+            # var = n / (4 * dt) * PSD is the variance per time sample for Gaussian noise in the time domain 
+
+            var = (n / (4.0 * self.emri['dt'])) * PSD_full
+
+            # Draw standard normal samples and scale by the variance
+            noise_real = self.xp.random.normal(loc=0.0, scale=1.0, size=var.shape) * self.xp.sqrt(var)
+            noise_imag = self.xp.random.normal(loc=0.0, scale=1.0, size=var.shape) * self.xp.sqrt(var)
+
+            # Because PSD excluded DC (index 0), the last index is exactly the Nyquist bin (if n is even)
+            if n % 2 == 0:
+                noise_imag[..., -1] = 0.0
+                noise_real[..., -1] *= self.xp.sqrt(2.0)
+
+            # Combine into complex frequency-domain noise (shape: channels, n//2)
+            noise_fd = noise_real + 1j * noise_imag
+
+            # Create a silent DC bin (0 Hz) to prepend to the array
+            DC_bin = self.xp.zeros(noise_fd.shape[:-1] + (1,), dtype=noise_fd.dtype)
+
+            # Concatenate to get the full (n//2 + 1) bins required by irfft
+            noise_fd_full = self.xp.concatenate((DC_bin, noise_fd), axis=-1)
+
+            # Inverse FFT back to time domain
+            noise_td = self.xp.fft.irfft(noise_fd_full, n=n, axis=-1)
+            
+            # Add to the raw waveform data
+            d_raw += noise_td
+            logger.info("Noise array successfully added to the time-series data.")
+
         self.slice_length = int(np.ceil(n/self.emri['Nblocks']))
         pad_size = (self.emri['Nblocks'] * self.slice_length) - n
         
@@ -827,8 +869,7 @@ class SPLIT:
                         sampler=sampler,
                         Nblocks=Nblocks,
                         min_autocorr_iters=min_autocorr_iters,
-                        gelmanrubin_threshold=1.05,
-                        variance_threshold=0.05
+                        gelmanrubin_threshold=1.05
                     )
 
                     if self.samp.get("check_converge", True) and is_converged:

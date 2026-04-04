@@ -256,11 +256,10 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks,
     )
 
 def check_convergence(sampler, Nblocks, min_autocorr_iters=50, 
-                      autocorr_threshold=50, gelmanrubin_threshold=1.05, 
-                      variance_threshold=0.05):
+                      autocorr_threshold=50, gelmanrubin_threshold=1.05):
     """
-    Evaluates sampler convergence via Autocorrelation (tau), Gelman-Rubin (R-hat), 
-    and Ensemble Variance Growth. Logs all sampler statistics, including PT swaps.
+    Evaluates sampler convergence via Autocorrelation (tau), and Gelman-Rubin (R-hat).
+    Logs all sampler statistics, including PT swaps.
     
     Returns:
         bool: True if all convergence criteria are met, False otherwise.
@@ -291,46 +290,15 @@ def check_convergence(sampler, Nblocks, min_autocorr_iters=50,
     max_r_st = np.nanmax(r_hat_st)
     max_r_ev = np.nanmax(r_hat_ev)
 
-    converged_tau = current_iteration > (autocorr_threshold * tau_est)
+    converged_tau = nsteps > (autocorr_threshold * tau_est)
     converged_r = (max_r_st < gelmanrubin_threshold) and (max_r_ev < gelmanrubin_threshold)
 
     logger.info(f"Max Gelman-Rubin (R-hat): Static = {max_r_st:.4f}, Evolving = {max_r_ev:.4f}")
     logger.info(f"Estimated Autocorr Time (tau): {tau_est:.1f} steps (Needs < {current_iteration/autocorr_threshold:.1f})")
-    logger.info(f"Effective Sample Size / walker: ~{current_iteration / tau_est:.1f}")
+    logger.info(f"Effective Sample Size / walker: ~{nsteps / tau_est:.1f}")
 
     # ---------------------------------------------------------
-    # 2. Ensemble Variance Growth Check
-    # ---------------------------------------------------------
-    window = min(500, nsteps // 4) 
-    
-    if window < 10:
-        logger.info(f"Variance Growth: Chain too short ({nsteps} steps) for meaningful check.")
-        converged_variance = False
-    else:
-        # Static Growth
-        recent_st = chain_st[-window:]
-        older_st = chain_st[-2*window : -window]
-        std_recent_st = np.std(recent_st, axis=(0, 1))
-        std_older_st = np.std(older_st, axis=(0, 1))
-        growth_st = (std_recent_st - std_older_st) / (std_older_st + 1e-12)
-        
-        # Evolving Growth
-        recent_ev = chain_ev[-window:]
-        older_ev = chain_ev[-2*window : -window]
-        std_recent_ev = np.std(recent_ev, axis=(0, 1))
-        std_older_ev = np.std(older_ev, axis=(0, 1))
-        growth_ev = (std_recent_ev - std_older_ev) / (std_older_ev + 1e-12)
-        
-        max_total_growth = max(np.nanmax(growth_st), np.nanmax(growth_ev))
-        converged_variance = max_total_growth < variance_threshold
-        
-        if not converged_variance:
-            logger.info(f"Variance Growth: EXPANDING (Max Growth: {max_total_growth:.2%})")
-        else:
-            logger.info(f"Variance Growth: STABILIZED (Max Growth: {max_total_growth:.2%})")
-
-    # ---------------------------------------------------------
-    # 3. Parallel Tempering Swap Acceptance
+    # 2. Parallel Tempering Swap Acceptance
     # ---------------------------------------------------------
     try:
         accepted_swaps = backend_obj.swaps_accepted
@@ -341,7 +309,7 @@ def check_convergence(sampler, Nblocks, min_autocorr_iters=50,
         logger.info("PT Swap Rates: N/A (Single temperature or tracking disabled)")
 
     # ---------------------------------------------------------
-    # 4. Move Acceptance Fractions
+    # 3. Move Acceptance Fractions
     # ---------------------------------------------------------
     logger.info("--- Move Acceptance Fractions ---")
     
@@ -362,4 +330,4 @@ def check_convergence(sampler, Nblocks, min_autocorr_iters=50,
     logger.info("================================================\n")
 
     # Final Convergence Boolean
-    return converged_tau and converged_r and converged_variance
+    return converged_tau and converged_r
