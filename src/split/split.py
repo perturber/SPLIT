@@ -386,7 +386,7 @@ class SPLIT:
             # Obtain noise variance from the one-sided PSD
             # var = n / (4 * dt) * PSD is the variance per time sample for Gaussian noise in the time domain 
 
-            var = (n / (4.0 * self.emri['dt'])) * PSD_full
+            var = (n / (4.0 * self.emri['dt'])) * self.xp.array(PSD_full)
 
             # Draw standard normal samples and scale by the variance
             noise_real = self.xp.random.normal(loc=0.0, scale=1.0, size=var.shape) * self.xp.sqrt(var)
