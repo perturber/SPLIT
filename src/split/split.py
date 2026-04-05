@@ -357,7 +357,7 @@ class SPLIT:
         PSD_full = generate_PSD(
             d_windowed,
             dt=self.emri['dt'],
-            noise_PSD=get_sensitivity,
+            noise_PSD=self.noise_model,
             channels=self.channels,
             noise_kwargs=self.noise_kwargs,
             use_gpu=self.use_gpu
@@ -441,11 +441,10 @@ class SPLIT:
 
         freq_mask_xp = self.xp.array(self.freq_mask)
 
-
         PSD_coarse = generate_PSD(
             self.d_slices, 
             dt=self.emri['dt'], 
-            noise_PSD=get_sensitivity,
+            noise_PSD=self.noise_model,
             channels=self.channels, 
             noise_kwargs=self.noise_kwargs, 
             use_gpu=self.use_gpu
