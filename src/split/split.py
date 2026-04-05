@@ -255,7 +255,7 @@ class SPLIT:
             #use the long-wavelength approximation
             logger.info("noise PSD: response=False; initializing with LWA I and II channels...")
             self.channels = ['I','II']
-            self.noise_kwargs = [{} for c in self.channels]
+            self.noise_kwargs = [dict(galactic_confusion=False) for c in self.channels]
             self.noise_model = sensitivity_LWA 
 
         self.all_param_names = ["m1", "m2", "a", "p0", "e0", "xI0", "dist", "qS", "phiS", "qK", "phiK", "Phi_phi0", "Phi_theta0", "Phi_r0"]
@@ -389,16 +389,39 @@ class SPLIT:
             var = (n / (4.0 * self.emri['dt'])) * self.xp.array(PSD_full)
 
             # Draw standard normal samples and scale by the variance
-            noise_real = self.xp.random.normal(loc=0.0, scale=1.0, size=var.shape) * self.xp.sqrt(var)
-            noise_imag = self.xp.random.normal(loc=0.0, scale=1.0, size=var.shape) * self.xp.sqrt(var)
+            noise_real = rng.standard_normal(size=var.shape) * self.xp.sqrt(var)
+            noise_imag = rng.standard_normal(size=var.shape) * self.xp.sqrt(var)
 
-            # Because PSD excluded DC (index 0), the last index is exactly the Nyquist bin (if n is even)
+            # Nyquist frequency bin for real data cannot have an imaginary component.
+            # From parseval's theorem, the real component of the Nyquist bin should be 
+            # scaled by sqrt(2) to preserve the total power.
             if n % 2 == 0:
                 noise_imag[..., -1] = 0.0
                 noise_real[..., -1] *= self.xp.sqrt(2.0)
 
             # Combine into complex frequency-domain noise (shape: channels, n//2)
             noise_fd = noise_real + 1j * noise_imag
+
+            # apply bandpass if available
+            fmin = self.emri.get("fmin", None)
+            fmax = self.emri.get("fmax", None)
+
+            if fmin is not None or fmax is not None:
+                # calculate the full frequency range without DC
+                freq_full = np.fft.rfftfreq(n, d=self.emri['dt'])[1:]
+
+                # boolean mask 
+                valid_mask = np.ones(len(freq_full), dtype=bool)
+                if fmin is not None:
+                    valid_mask &= (freq_full >= fmin)
+                if fmax is not None:
+                    valid_mask &= (freq_full <= fmax)
+
+                valid_mask_xp = self.xp.array(valid_mask)
+
+                # any noise outside the valid mask is zeroed
+                noise_fd[...,~valid_mask_xp] = 0.0
+                logger.info(f"Applied noise bandpass filter: fmin={fmin}, fmax={fmax}")
 
             # Create a silent DC bin (0 Hz) to prepend to the array
             DC_bin = self.xp.zeros(noise_fd.shape[:-1] + (1,), dtype=noise_fd.dtype)
@@ -424,7 +447,7 @@ class SPLIT:
         self.d_slices *= block_window_data[None, None, :] 
 
         # Calculate FFTs and masked PSDs
-        freq = np.fft.rfftfreq(self.slice_length)/self.emri['dt']
+        freq = np.fft.rfftfreq(self.slice_length, d=self.emri['dt'])
         valid_freqs = freq[1:]
 
         self.freq_mask = np.full(len(valid_freqs), True)
