@@ -44,6 +44,7 @@ def _plot_static_diagnostics(chain, names, truths, discard_idx, out_dir, max_plo
             show_titles=True, quantiles=[0.16, 0.5, 0.84],
             **corner_kwargs
         )
+        fig_corner.tight_layout()
         plt.savefig(os.path.join(out_dir, "corner_static.png"), dpi=300)
         plt.close(fig_corner)
     except ValueError as e:
@@ -85,6 +86,7 @@ def _plot_evolving_diagnostics(chain, names, truths, discard_idx, Nblocks, out_d
                 show_titles=True, quantiles=[0.16, 0.5, 0.84],
                 **corner_kwargs
             )
+            fig_corner.tight_layout()
             plt.savefig(os.path.join(out_dir, f"corner_evolving_{i}.png"), dpi=300)
             plt.close(fig_corner)
         except ValueError as e:
@@ -203,6 +205,7 @@ def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_e
                 projected_t0_samples, labels=(names_st + names_ev), truths=active_truths, 
                 show_titles=True, quantiles=[0.16, 0.5, 0.84], **corner_kwargs
             )
+            fig_t0.tight_layout()
             plt.savefig(os.path.join(out_dir, "corner_t0_projected.png"), dpi=300)
             plt.close(fig_t0)
         except ValueError as e:
