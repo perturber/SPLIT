@@ -411,7 +411,6 @@ class SPLIT:
             
             # Add to the raw waveform data
             d_raw += noise_td
-            logger.info("Noise array successfully added to the time-series data.")
 
         self.slice_length = int(np.ceil(n/self.emri['Nblocks']))
         pad_size = (self.emri['Nblocks'] * self.slice_length) - n
