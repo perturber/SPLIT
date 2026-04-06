@@ -697,7 +697,7 @@ class SPLIT:
 
             for idx, param in enumerate(self.samp['static_params']):
                 if param in extrinsic_names:
-                    jitter_array_st[idx] = 1e-2 # fixed jitter for extrinsic parameters.
+                    jitter_array_st[idx] = 1e-1 # fixed jitter for extrinsic parameters.
 
             coords_static += np.random.normal(0, scale_st * jitter_array_st, size=coords_static.shape)
 

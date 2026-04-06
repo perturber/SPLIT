@@ -40,11 +40,9 @@ def _plot_static_diagnostics(chain, names, truths, discard_idx, out_dir, max_plo
 
     try:
         fig_corner = corner.corner(
-            flat_chain, labels=names, truths=truths, 
-            show_titles=True, quantiles=[0.16, 0.5, 0.84],
+            flat_chain, labels=names, truths=truths,
             **corner_kwargs
         )
-        fig_corner.tight_layout()
         plt.savefig(os.path.join(out_dir, "corner_static.png"), dpi=300)
         plt.close(fig_corner)
     except ValueError as e:
@@ -82,11 +80,9 @@ def _plot_evolving_diagnostics(chain, names, truths, discard_idx, Nblocks, out_d
 
         try:
             fig_corner = corner.corner(
-                flat_chain, labels=labels_i, truths=truths[i], 
-                show_titles=True, quantiles=[0.16, 0.5, 0.84],
+                flat_chain, labels=labels_i, truths=truths[i],
                 **corner_kwargs
             )
-            fig_corner.tight_layout()
             plt.savefig(os.path.join(out_dir, f"corner_evolving_{i}.png"), dpi=300)
             plt.close(fig_corner)
         except ValueError as e:
@@ -107,8 +103,16 @@ def _plot_autocorrelation(chain_st, chain_ev, out_dir, min_iters):
     for idx, n in enumerate(N_steps):
         taus_st[idx] = emcee.autocorr.integrated_time(chain_st[:n], tol=min_iters, quiet=True)
         
-        reshaped_ev = chain_ev[:n].transpose(0, 1, 2, 3).reshape(n, nwalkers * Nblocks, ndim_ev)
-        taus_ev[idx] = emcee.autocorr.integrated_time(reshaped_ev, tol=min_iters, quiet=True)
+        # =========================================
+        # Calculate tau of evolving in each block first
+        # and then take the max across blocks for each param
+        # =========================================
+        tau_ev_blocks = np.array([
+            emcee.autocorr.integrated_time(chain_ev[:n, :, i, :], tol=min_iters, quiet=True)
+            for i in range(Nblocks)
+        ])
+
+        taus_ev[idx] = np.nanmax(tau_ev_blocks, axis=0)
 
     fig_ac, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 10))
     
@@ -203,9 +207,8 @@ def _plot_backward_projection(chain_st, chain_ev, discard_idx, names_st, names_e
         try:
             fig_t0 = corner.corner(
                 projected_t0_samples, labels=(names_st + names_ev), truths=active_truths, 
-                show_titles=True, quantiles=[0.16, 0.5, 0.84], **corner_kwargs
+                **corner_kwargs
             )
-            fig_t0.tight_layout()
             plt.savefig(os.path.join(out_dir, "corner_t0_projected.png"), dpi=300)
             plt.close(fig_t0)
         except ValueError as e:
