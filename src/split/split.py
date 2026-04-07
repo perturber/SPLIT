@@ -895,5 +895,6 @@ class SPLIT:
 
                     if self.samp.get("check_converge", True) and is_converged:
                         logger.info(f"Convergence achieved at step {sampler.iteration}!")
+                        break
 
             logger.info("Run finished!")
