@@ -221,7 +221,8 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks,
                             static_in_names, ev_in_names,
                             val_samp_st, val_samp_ev, true_pars_all, 
                             traj_config, min_autocorr_iters=50, 
-                            discard_frac=0.5, max_plot=10000, corner_kwargs=None):
+                            discard_frac=0.5, max_plot=10000, 
+                            corner_kwargs=None, phase_indices=[-1,-2]):
     """
     Extract multi-branch chains, plot 1D walks, static posteriors, and t=0 projections.
     
@@ -261,7 +262,7 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks,
         corner_kwargs
     )
 
-def check_convergence(sampler, Nblocks, min_autocorr_iters=50, 
+def check_convergence(sampler, Nblocks, min_autocorr_iters=50,
                       autocorr_threshold=50, gelmanrubin_threshold=1.05):
     """
     Evaluates sampler convergence via Autocorrelation (tau), and Gelman-Rubin (R-hat).
@@ -300,7 +301,7 @@ def check_convergence(sampler, Nblocks, min_autocorr_iters=50,
     converged_r = (max_r_st < gelmanrubin_threshold) and (max_r_ev < gelmanrubin_threshold)
 
     logger.info(f"Max Gelman-Rubin (R-hat): Static = {max_r_st:.4f}, Evolving = {max_r_ev:.4f}")
-    logger.info(f"Estimated Autocorr Time (tau): {tau_est:.1f} steps (Needs < {current_iteration/autocorr_threshold:.1f})")
+    logger.info(f"Estimated Autocorr Time (tau): {tau_est:.1f} steps (Needs < {nsteps/autocorr_threshold:.1f})")
     logger.info(f"Effective Sample Size / walker: ~{nsteps / tau_est:.1f}")
 
     # ---------------------------------------------------------
