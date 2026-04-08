@@ -853,8 +853,6 @@ class SPLIT:
             
                 if (sampler.iteration % check_interval == 0):
 
-                    min_autocorr_iters = 5 #minimum number of iterations (N = min_autocorr_iters * tau) for reliable tau calcs. 
-
                     # 1. Pack the trajectory reconstruction variables into a single dictionary for plotting
                     traj_config = {
                         "dt": self.emri['dt'],
@@ -881,7 +879,8 @@ class SPLIT:
                         val_samp_ev=val_samp_ev, 
                         true_pars_all=self.true_pars, 
                         traj_config=traj_config, 
-                        min_autocorr_iters=min_autocorr_iters,
+                        min_autocorr_iters=self.samp.get('min_autocorr', 5),
+                        autocorr_threshold=self.samp.get('autocorr_thresh', 50),
                         discard_frac=self.samp.get('discard',0.5)
                     )
 
@@ -889,7 +888,7 @@ class SPLIT:
                     is_converged = check_convergence(
                         sampler=sampler,
                         Nblocks=Nblocks,
-                        min_autocorr_iters=min_autocorr_iters,
+                        min_autocorr_iters=self.samp.get('min_autocorr', 5),
                         gelmanrubin_threshold=1.05
                     )
 
