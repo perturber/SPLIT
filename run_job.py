@@ -14,6 +14,7 @@ if __name__ == '__main__':
                         "  - analysis setup: data_model, analysis_model, response, add_noise, rng_seed\n"
                         "  - EMRI Params: m1, m2, a, p0, e0, xI0, dist, qS, phiS, qK, phiK, Phi_phi0, Phi_theta0, Phi_r0\n"
                         "  - Observation: T, dt, desired_SNR\n"
+                        "  - Custom injection: data_add_args, analysis_add_args\n"
                         "  - Blocks: Nblocks, alpha_block\n"
                         "  - Frequency mask: fmin, fmax\n"
                         "  - Likelihood/Prior: nu_like, nu_prior, sigma_prior")
