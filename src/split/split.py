@@ -21,6 +21,14 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 # --------------------------
 
+# --- Suppress FEW mass ratio warning ---
+class _SuppressMassRatioWarning(logging.Filter):
+    def filter(self, record):
+        return "Mass ratio is outside" not in record.getMessage()
+
+logging.getLogger("few").addFilter(_SuppressMassRatioWarning())
+# ---------------------------------------
+
 #eryn imports
 from eryn.ensemble import EnsembleSampler
 from eryn.state import  State
