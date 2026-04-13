@@ -211,6 +211,16 @@ class SPLIT:
 
     Some choices, such as the Ensemble Sampler moves are currently baked in.
     """
+
+    @property
+    def named_models(self):
+        from .customEMRIs.AccEccEqPn5AAK import AccEccEqPn5AAKWaveform
+
+        return {
+            "AccEccEqPn5AAKWaveform": AccEccEqPn5AAKWaveform,
+            # Add future custom waveform models here.
+        }
+    
     def __init__(self, emri_config_path, sample_config_path, out_dir, custom_injection_func=None):
 
         """
@@ -276,11 +286,15 @@ class SPLIT:
             logger.info("setting the data_model to custom_injection_func...")
             self.data_func = custom_injection_func
         elif (data_model is not None) and (custom_injection_func is None):
+            # data_model is provided. Check if available in SPLIT, else assume its a FEW model.
             logger.info(f"setting the data_model to {data_model}...")
-            self.data_func = data_model
+            if data_model in self.named_models:
+                self.data_func = self.named_models[data_model]
+            else:
+                self.data_func = data_model
         else:
-            logger.warning("Both data_model and custom_injection_func provided. Choosing data_model for data generation...")
-            self.data_func = data_model
+            raise ValueError(f"Both data_model and custom_injection_func provided. \
+                           You can only specify one.")
 
         # analysis_model used for inference
         analysis_model = self.emri.get('analysis_model', None)
