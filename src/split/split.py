@@ -271,10 +271,11 @@ class SPLIT:
         self.all_param_names = ["m1", "m2", "a", "p0", "e0", "xI0", "dist", "qS", "phiS", "qK", "phiK", "Phi_phi0", "Phi_theta0", "Phi_r0"]
         self.true_pars = [self.emri.get(k, 0.0) for k in self.all_param_names]
         
-        # additional arguments for the data generation model.
-        # In the future, this can be made more general and added
-        # to the analysis model as well.
-        self.add_args = self.emri.get('add_args', [])
+        # additional arguments for the data model.
+        self.data_add_args = self.emri.get('data_add_args', [])
+
+        # additional arguments for the analysis model.
+        self.analysis_add_args = self.emri.get('analysis_add_args', [])
 
         # data_model used for data generation
         data_model = self.emri.get('data_model', None)
@@ -363,7 +364,7 @@ class SPLIT:
             waveform_generator = wave_gen
 
         #correctly windowed data to accurately calculate 1-year SNR
-        d_windowed = self.xp.array(waveform_generator(*self.true_pars, *self.add_args, T=self.emri['T'], dt=self.emri['dt']))
+        d_windowed = self.xp.array(waveform_generator(*self.true_pars, *self.data_add_args, T=self.emri['T'], dt=self.emri['dt']))
         N_finite = d_windowed.shape[-1]
         finite_window = self.xp.array(tukey(N_finite, alpha=self.emri['alpha_block'], use_gpu=self.use_gpu))
         d_windowed *= finite_window
@@ -384,7 +385,7 @@ class SPLIT:
         self.true_pars = [self.emri.get(k, 0.0) for k in self.all_param_names]
 
         # Generate raw data for slicing
-        d_raw = self.xp.atleast_2d(self.xp.array(waveform_generator(*self.true_pars, *self.add_args, T=self.emri['T'], dt=self.emri['dt'])))
+        d_raw = self.xp.atleast_2d(self.xp.array(waveform_generator(*self.true_pars, *self.data_add_args, T=self.emri['T'], dt=self.emri['dt'])))
 
         n = len(d_raw[0])
 
@@ -504,7 +505,9 @@ class SPLIT:
         
         t, p, e, x, pp, pt, pr = self.analysis_traj(
             self.emri['m1'], self.emri['m2'], self.emri['a'], self.emri['p0'],
-            self.emri['e0'], self.emri['xI0'], Phi_phi0=self.emri['Phi_phi0'],
+            self.emri['e0'], self.emri['xI0'], 
+            *self.analysis_add_args,            
+            Phi_phi0=self.emri['Phi_phi0'],
             Phi_theta0=self.emri['Phi_theta0'], Phi_r0=self.emri['Phi_r0'],
             T=self.emri['T'], dt=self.emri['dt'], upsample=True
         )
@@ -592,7 +595,8 @@ class SPLIT:
                 emri_config=self.emri,
                 all_param_names=self.all_param_names,
                 true_evolving_dict=self.true_evolving_dict,
-                traj_instance=self.analysis_traj
+                traj_instance=self.analysis_traj,
+                traj_add_args=self.analysis_add_args
             )
         }
 

@@ -13,7 +13,8 @@ class MarkovStudenttPrior:
     """
     def __init__(self, prior_ev, prior_st, dt_block, nu,
                  sigma_dict, samp_config, emri_config,
-                 all_param_names, true_evolving_dict, traj_instance):
+                 all_param_names, true_evolving_dict, 
+                 traj_instance, traj_add_args):
         """
         Initializes the Student-t Prior.
 
@@ -47,6 +48,8 @@ class MarkovStudenttPrior:
         traj_instance : few.trajectory.inspiral.EMRIInspiral
             A pre-initialized FEW trajectory object (e.g., initialized with KerrEccEqFlux). 
             Used to compute the deterministic forward evolution between blocks.
+        traj_add_args : List
+            A list of additional arguments in case of a custom trajectory.
         """
         self.prior_ev = prior_ev
         self.prior_st = prior_st
@@ -71,6 +74,7 @@ class MarkovStudenttPrior:
                 self.inv_var[i] = 1.0 / (100.0**2) #fall back
         
         self.traj = traj_instance
+        self.traj_add_args = traj_add_args
 
         # Satisfy the Eryn gods
         self.key_order = [0]
@@ -161,6 +165,7 @@ class MarkovStudenttPrior:
                     _, p, e, x, pp, pt, pr = self.traj(
                         m1, m2, a,
                         state_prev["p0"], state_prev["e0"], state_prev["xI0"],
+                        *self.traj_add_args,
                         Phi_phi0=state_prev["Phi_phi0"], 
                         Phi_theta0=state_prev["Phi_theta0"], 
                         Phi_r0=state_prev["Phi_r0"],
