@@ -223,9 +223,11 @@ class SPLIT:
     @property
     def named_models(self):
         from .customEMRIs.AccEccEqPn5AAK import AccEccEqPn5AAKWaveform
+        from .customEMRIs.FastKerrEccentricEquatorialAccretionFlux import FastKerrEccentricEquatorialAccretionFlux
 
         return {
             "AccEccEqPn5AAKWaveform": AccEccEqPn5AAKWaveform,
+            "FastKerrEccentricEquatorialAccretionFlux": FastKerrEccentricEquatorialAccretionFlux,
             # Add future custom waveform models here.
         }
     
