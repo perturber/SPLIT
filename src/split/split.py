@@ -231,7 +231,7 @@ class SPLIT:
             # Add future custom waveform models here.
         }
     
-    def __init__(self, emri_config_path, sample_config_path, out_dir, custom_injection_func=None):
+    def __init__(self, emri_config_path, sample_config_path, out_dir, custom_injection_func=None, custom_analysis_func=None):
 
         """
         Initializes the SPLIT pipeline by loading JSON configuration files, mapping 
@@ -245,8 +245,9 @@ class SPLIT:
             out_dir (str): Root directory where all output HDF5 chains and diagnostic 
                 plots will be saved.
             custom_injection_func (callable, optional): A custom FEW waveform generator 
-                for injecting modified or environmentally dirtied signals. If None, 
-                defaults to the standard vacuum FastKerrEccentricEquatorialFlux.
+                for injecting a signals.
+            custom_analysis_func (callable, optional): A custom FEW waveform generator
+                for inference.
         """
 
         #LOAD JSON configurations
@@ -310,14 +311,24 @@ class SPLIT:
 
         # analysis_model used for inference
         analysis_model = self.emri.get('analysis_model', None)
-        if analysis_model is None:
+        if (analysis_model is None) and (custom_analysis_func is None):
             # if none provided, set it to be 
             # the same as the data model
             logger.warning("analysis_model not provided; setting the analysis_model to data_model...")
             self.analysis_func = self.data_func
-        else:
+        elif (analysis_model is None) and (custom_analysis_func is not None):
+            logger.info("setting the analysis_model to custom_analysis_func...")
+            self.analysis_func = custom_analysis_func
+        elif (analysis_model is not None) and (custom_analysis_func is None):
+            # analysis_model is provided. Check if available in SPLIT, else assume its a FEW model.
             logger.info(f"setting the analysis model to {analysis_model}")
-            self.analysis_func = analysis_model
+            if analysis_model in self.named_models:
+                self.analysis_func = self.named_models[analysis_model]
+            else:
+                self.analysis_func = analysis_model
+        else:
+            raise ValueError(f"Both analysis_model and custom_analysis_func provided. \
+                           You can only specify one.")
 
         # extract the trajectory module of the analysis waveform model
         dummy_wave_gen = GenerateEMRIWaveform(
