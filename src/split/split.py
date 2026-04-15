@@ -184,14 +184,20 @@ def log_like_semicoherent(pars_in, Tobs_block_padded, dt, df, slice_length, alph
         pars_block[indices_static_fixed] = value_fixed_static
         pars_block[indices_ev_fixed] = value_fixed_ev[i, :]
 
-        s_i = window_gen_block_worker(
-            *list(pars_block), 
-            resp_instance=worker_resp_blocks[i],
-            T=Tobs_block_padded, 
-            dt=dt, 
-            slice_length=slice_length,
-            alpha=alpha_block
-        )
+        try:
+            s_i = window_gen_block_worker(
+                *list(pars_block), 
+                resp_instance=worker_resp_blocks[i],
+                T=Tobs_block_padded, 
+                dt=dt, 
+                slice_length=slice_length,
+                alpha=alpha_block
+            )
+
+            if xp.any(xp.isnan(s_i)):
+                return -np.inf
+        except Exception:
+            return -np.inf
         
         s_blocks.append(xp.atleast_2d(xp.asarray(s_i)))
 
