@@ -14,7 +14,8 @@ class MarkovStudenttPrior:
     def __init__(self, prior_ev, prior_st, dt_block, nu,
                  sigma_dict, samp_config, emri_config,
                  all_param_names, true_evolving_dict, 
-                 traj_instance, traj_add_args):
+                 traj_instance, 
+                 custom_arg_names, analysis_add_args_dict):
         """
         Initializes the Student-t Prior.
 
@@ -48,8 +49,10 @@ class MarkovStudenttPrior:
         traj_instance : few.trajectory.inspiral.EMRIInspiral
             A pre-initialized FEW trajectory object (e.g., initialized with KerrEccEqFlux). 
             Used to compute the deterministic forward evolution between blocks.
-        traj_add_args : List
-            A list of additional arguments in case of a custom trajectory.
+        custom_arg_names : list
+            A list of all unique custom arg names in the data and analysis models.
+        analysis_add_args_dict : dict
+            Dictionary containing the static analysis assumptions for custom parameters.
         """
         self.prior_ev = prior_ev
         self.prior_st = prior_st
@@ -74,8 +77,9 @@ class MarkovStudenttPrior:
                 self.inv_var[i] = 1.0 / (100.0**2) #fall back
         
         self.traj = traj_instance
-        self.traj_add_args = traj_add_args
-
+        self.custom_arg_names = custom_arg_names
+        self.analysis_add_args_dict = analysis_add_args_dict
+        
         # Satisfy the Eryn gods
         self.key_order = [0]
 
@@ -160,12 +164,21 @@ class MarkovStudenttPrior:
                     else:
                         state_prev[param] = self.emri[param]
 
+                current_add_args = []
+                for arg_name in self.custom_arg_names:
+                    if arg_name in self.st_names:
+                        # Pull actively inferred value from walker
+                        current_add_args.append(w_st[self.st_names.index(arg_name)])
+                    else:
+                        # Pull fixed value from analysis assumptions
+                        current_add_args.append(self.analysis_add_args_dict.get(arg_name, 0.0))
+
                 #forward evolve the block i-1 by dt_block
                 try:
                     _, p, e, x, pp, pt, pr = self.traj(
                         m1, m2, a,
                         state_prev["p0"], state_prev["e0"], state_prev["xI0"],
-                        *self.traj_add_args,
+                        *current_add_args,
                         Phi_phi0=state_prev["Phi_phi0"], 
                         Phi_theta0=state_prev["Phi_theta0"], 
                         Phi_r0=state_prev["Phi_r0"],

@@ -280,14 +280,34 @@ class SPLIT:
             self.noise_model = sensitivity_LWA 
 
         self.all_param_names = ["m1", "m2", "a", "p0", "e0", "xI0", "dist", "qS", "phiS", "qK", "phiK", "Phi_phi0", "Phi_theta0", "Phi_r0"]
-        self.true_pars = [self.emri.get(k, 0.0) for k in self.all_param_names]
         
         # additional arguments for the data model.
-        self.data_add_args = self.emri.get('data_add_args', [])
+        self.data_add_args = self.emri.get('data_add_args', {})
 
         # additional arguments for the analysis model.
-        # TODO: add capability to infer analysis_add_args.
-        self.analysis_add_args = self.emri.get('analysis_add_args', [])
+        self.analysis_add_args = self.emri.get('analysis_add_args', {})
+
+        # extract all unique add_args from data and analysis models
+        custom_keys = list(self.data_add_args.keys())
+        for k in self.analysis_add_args.keys():
+            if k not in custom_keys:
+                custom_keys.append(k)
+
+        self.custom_arg_names = custom_keys
+        self.all_param_names.extend(self.custom_arg_names)
+
+        # custom args can only be static parameters (for now).
+        for k in self.custom_arg_names:
+            if k in self.samp.get('evolving_params', []):
+                raise ValueError(
+                    f"Custom parameter '{k}' cannot be in evolving_params. "
+                    f"Custom args are strictly static."
+                )
+
+        # build true pars from the injection data
+        self.true_pars = [self.emri.get(k, 0.0) for k in self.all_param_names[:14]] # vacuum-GR params
+        self.true_pars.extend([self.data_add_args.get(k, 0.0) for k in self.custom_arg_names]) # custom params, set to 0.0 if not in data_add_args
+
 
         # data_model used for data generation
         data_model = self.emri.get('data_model', None)
@@ -353,7 +373,7 @@ class SPLIT:
         6. Computing the frequency-domain FFTs and masked Noise PSDs for the workers.
         """
         
-        logger.info("Generating waveform and scaling SNR...")
+        logger.info("Generating waveform...")
 
         # if self.response is True, ResponseWrapper returns a list, 
         # but if not, FEW will not return a list by default
@@ -386,7 +406,7 @@ class SPLIT:
             waveform_generator = wave_gen
 
         #correctly windowed data to accurately calculate 1-year SNR
-        d_windowed = self.xp.array(waveform_generator(*self.true_pars, *self.data_add_args, T=self.emri['T'], dt=self.emri['dt']))
+        d_windowed = self.xp.array(waveform_generator(*self.true_pars, T=self.emri['T'], dt=self.emri['dt']))
         N_finite = d_windowed.shape[-1]
         finite_window = self.xp.array(tukey(N_finite, alpha=self.emri['alpha_block'], use_gpu=self.use_gpu))
         d_windowed *= finite_window
@@ -400,14 +420,22 @@ class SPLIT:
             use_gpu=self.use_gpu
         )
 
-        current_SNR = SNRcalc(d_windowed, PSD_full, self.emri['dt'], use_gpu=self.use_gpu)
+        # =======================================
+        # ----- Scale by desired SNR ------------
+        # =======================================
+        if self.emri.get('desired_SNR', None):
+            logger.info("Scaling SNR...")
+            current_SNR = SNRcalc(d_windowed, PSD_full, self.emri['dt'], use_gpu=self.use_gpu)
 
-        # distance scaling
-        self.emri['dist'] = self.emri['dist'] * current_SNR / self.emri['desired_SNR']
-        self.true_pars = [self.emri.get(k, 0.0) for k in self.all_param_names]
+            # distance scaling
+            self.emri['dist'] = self.emri['dist'] * current_SNR / self.emri['desired_SNR']
+            self.true_pars = [self.emri.get(k, 0.0) for k in self.all_param_names[:14]] # vacuum-GR params
+            self.true_pars.extend([self.data_add_args.get(k, 0.0) for k in self.custom_arg_names]) # custom params, set to 0.0 if not in data_add_args
 
-        # Generate raw data for slicing
-        d_raw = self.xp.atleast_2d(self.xp.array(waveform_generator(*self.true_pars, *self.data_add_args, T=self.emri['T'], dt=self.emri['dt'])))
+            # Generate raw data for slicing
+            d_raw = self.xp.atleast_2d(self.xp.array(waveform_generator(*self.true_pars, T=self.emri['T'], dt=self.emri['dt'])))
+        else:
+            d_raw = self.xp.atleast_2d(d_windowed)
 
         n = len(d_raw[0])
 
@@ -524,11 +552,14 @@ class SPLIT:
         """
 
         logger.info("Initializing priors...")
+
+        # The reference trajectory MUST be evaluated using the true injected parameters
+        true_custom_args = [self.data_add_args.get(k, 0.0) for k in self.custom_arg_names]
         
         t, p, e, x, pp, pt, pr = self.analysis_traj(
             self.emri['m1'], self.emri['m2'], self.emri['a'], self.emri['p0'],
             self.emri['e0'], self.emri['xI0'], 
-            *self.analysis_add_args,            
+            *true_custom_args,            
             Phi_phi0=self.emri['Phi_phi0'],
             Phi_theta0=self.emri['Phi_theta0'], Phi_r0=self.emri['Phi_r0'],
             T=self.emri['T'], dt=self.emri['dt'], upsample=True
@@ -539,7 +570,7 @@ class SPLIT:
             "p0": p[start_indices],
             "e0": e[start_indices],
             "xI0": x[start_indices],
-            "Phi_phi0": pp[start_indices] % (2*np.pi), #module important to respect prior bounds
+            "Phi_phi0": pp[start_indices] % (2*np.pi), #modulo important to respect prior bounds
             "Phi_theta0": pt[start_indices] % (2*np.pi),
             "Phi_r0": pr[start_indices] % (2*np.pi),
         }
@@ -572,9 +603,14 @@ class SPLIT:
             "Phi_r0": (0.0, 2*np.pi)
         }
 
+        # Add fallback bounds for custom parameters based on the DATA model assumptions
+        for k in self.custom_arg_names:
+            val = self.data_add_args.get(k, 0.0)
+            self.bounds_dict[k] = (val - abs(val)*0.5, val + abs(val)*0.5) if val != 0 else (-10.0, 10.0)
+
         # check if user has provided custom prior bounds for any parameter
         # Else set them from the bounds_dict defined above.
-        custom_bounds = self.samp("custom_bounds", {})
+        custom_bounds = self.samp.get("custom_bounds", {})
 
         if custom_bounds:
             logger.info("Applying custom prior bounds...")
@@ -583,7 +619,6 @@ class SPLIT:
                     self.bounds_dict[param] = tuple(bounds)
                 else:
                     logger.warning(f"Parameter '{param}' in custom_bounds is not recognized. Ignoring.")
-            
 
         priors_evolving = {}
         priors_static = {}
@@ -632,7 +667,8 @@ class SPLIT:
                 all_param_names=self.all_param_names,
                 true_evolving_dict=self.true_evolving_dict,
                 traj_instance=self.analysis_traj,
-                traj_add_args=self.analysis_add_args
+                custom_arg_names=self.custom_arg_names,
+                analysis_add_args_dict=self.analysis_add_args
             )
         }
 
@@ -702,19 +738,35 @@ class SPLIT:
         static_fixed_names = [p for p in self.all_param_names if p not in active_and_fixed_ev and p not in self.samp['static_params']]
         indices_static_fixed = [self.all_param_names.index(name) for name in static_fixed_names]
         
-        value_fixed_ev = np.column_stack([self.true_evolving_dict[name] for name in self.samp['fixed_evolving']])
-        value_fixed_static = [self.true_pars[idx] for idx in indices_static_fixed]
+        if self.samp['fixed_evolving']:
+            value_fixed_ev = np.column_stack([self.true_evolving_dict[name] for name in self.samp['fixed_evolving']])
+        else:
+            value_fixed_ev = np.empty((self.emri['Nblocks'], 0))
+        value_fixed_static = []
+        for name in static_fixed_names:
+            if name in self.custom_arg_names:
+                # The analysis model is firmly fixed to the assumed analysis arguments
+                value_fixed_static.append(self.analysis_add_args.get(name, 0.0))
+            else:
+                value_fixed_static.append(self.true_pars[self.all_param_names.index(name)])
 
         ndim_evolving = len(indices_ev_in)
         ndim_static = len(indices_static_in)
         ndims = {"evolving": ndim_evolving, "static": ndim_static}
         nleaves_max = {"evolving": Nblocks, "static": 1}
 
-        # 3. Initialize Backend and Start State
         # Extract true coordinates to act as the epicenter for the initial state
-        val_samp_st = np.array([self.true_pars[idx] for idx in indices_static_in])
         val_samp_ev = np.column_stack([self.true_evolving_dict[name] for name in self.samp['evolving_params']])
+        val_samp_st = []
+        for name in self.samp['static_params']:
+            if name in self.custom_arg_names:
+                # Seed walkers around the data assumed value
+                val_samp_st.append(self.data_add_args.get(name, 0.0))
+            else:
+                val_samp_st.append(self.true_pars[self.all_param_names.index(name)])
+        val_samp_st = np.array(val_samp_st)
         
+        # 3. Initialize Backend and Start State
         try:
             if old_filename is not None:
                 # user provided an old filename, so we try to load it and resume from the last sample
