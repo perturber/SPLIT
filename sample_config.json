@@ -19,6 +19,9 @@
         "xI0", 
         "Phi_theta0"
     ],
+    "custom_bounds": {
+        "dist": [0.1,10.0]
+    },
     "moves": {
         "BlockStretch": 0.5,
         "BlockGaussian": 0.0,

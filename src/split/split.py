@@ -285,6 +285,7 @@ class SPLIT:
         self.data_add_args = self.emri.get('data_add_args', [])
 
         # additional arguments for the analysis model.
+        # TODO: add capability to infer analysis_add_args.
         self.analysis_add_args = self.emri.get('analysis_add_args', [])
 
         # data_model used for data generation
@@ -532,6 +533,7 @@ class SPLIT:
             "Phi_r0": pr[start_indices] % (2*np.pi),
         }
 
+
         p_min, p_max = self.true_evolving_dict['p0'][-1] * (1-1e-2), self.emri['p0'] * (1+1e-2)
         e_min, e_max = (self.true_evolving_dict['e0'][-1] * (1-1e-2), self.emri['e0'] * (1+1e-2)) if self.emri['e0'] > 0 else (0.0, 0.01)
         a_spin = self.emri['a']
@@ -558,6 +560,19 @@ class SPLIT:
             "Phi_theta0": (0.0, 2*np.pi), 
             "Phi_r0": (0.0, 2*np.pi)
         }
+
+        # check if user has provided custom prior bounds for any parameter
+        # Else set them from the bounds_dict defined above.
+        custom_bounds = self.samp("custom_bounds", {})
+
+        if custom_bounds:
+            logger.info("Applying custom prior bounds...")
+            for param, bounds in custom_bounds.items():
+                if param in self.bounds_dict:
+                    self.bounds_dict[param] = tuple(bounds)
+                else:
+                    logger.warning(f"Parameter '{param}' in custom_bounds is not recognized. Ignoring.")
+            
 
         priors_evolving = {}
         priors_static = {}
