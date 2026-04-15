@@ -205,7 +205,12 @@ def log_like_semicoherent(pars_in, Tobs_block_padded, dt, df, slice_length, alph
     kth_term = ((nu+2)/2) * xp.log(1 + (1/nu) * bin_inner_prod)
     summed_term = xp.sum(kth_term)
 
-    return -float(summed_term.get())
+    result = -float(summed_term.get())
+
+    if np.isnan(result) or np.isinf(result):
+        return -np.inf
+
+    return result
 
 class SPLIT:
     """
