@@ -245,30 +245,30 @@ def update_diagnostic_plots(sampler, diagnostics_dir, Nblocks,
     # Extract chains. Shape mappings:
     # chain_static: (nsteps, nwalkers, ndim_static)
     # chain_evolving: (nsteps, nwalkers, Nblocks, ndim_evolving)
-    chain_st = sampler.get_chain()["static"][:, 0, :, 0, :] 
-    chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :] 
+    full_chain_st = sampler.get_chain()["static"][:, 0, :, 0, :] 
+    full_chain_ev = sampler.get_chain()["evolving"][:, 0, :, :, :]
 
     # Discard the first discard_frac fraction for corner plots and backwards evolution
-    discard_idx = int(chain_st.shape[0] * discard_frac)
-    chain_st = chain_st[discard_idx:]
-    chain_ev = chain_ev[discard_idx:]
+    discard_idx = int(full_chain_st.shape[0] * discard_frac)
+    sliced_chain_st = full_chain_st[discard_idx:]
+    sliced_chain_ev = full_chain_ev[discard_idx:]
 
     # initialize corner_kwargs if None
     if corner_kwargs is None:
         corner_kwargs = {}
 
     # 1. Static Branch Diagnostics
-    _plot_static_diagnostics(chain_st, static_in_names, val_samp_st, diagnostics_dir, max_plot, corner_kwargs, start_step=discard_idx)
+    _plot_static_diagnostics(sliced_chain_st, static_in_names, val_samp_st, diagnostics_dir, max_plot, corner_kwargs, start_step=discard_idx)
 
     # 2. Evolving Branch Diagnostics
-    _plot_evolving_diagnostics(chain_ev, ev_in_names, val_samp_ev, Nblocks, diagnostics_dir, max_plot, corner_kwargs, start_step=discard_idx)
+    _plot_evolving_diagnostics(sliced_chain_ev, ev_in_names, val_samp_ev, Nblocks, diagnostics_dir, max_plot, corner_kwargs, start_step=discard_idx)
 
-    # 3. Autocorrelation
-    _plot_autocorrelation(chain_st, chain_ev, diagnostics_dir, min_autocorr_iters, autocorr_threshold)
+    # 3. Autocorrelation (plot with the full post-burn-in chains)
+    _plot_autocorrelation(full_chain_st, full_chain_ev, diagnostics_dir, min_autocorr_iters, autocorr_threshold)
 
     # 4. Backward Projection to t=0
     _plot_backward_projection(
-        chain_st, chain_ev, static_in_names, ev_in_names, 
+        sliced_chain_st, sliced_chain_ev, static_in_names, ev_in_names, 
         true_pars_all, Nblocks, traj_config, diagnostics_dir, max_plot,
         corner_kwargs
     )
