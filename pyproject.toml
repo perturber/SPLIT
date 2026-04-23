@@ -30,5 +30,12 @@ gpu = [
     "stableemrifisher",
 ]
 
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "myst-parser",        # Allows you to write docs in Markdown instead of just reST
+    "numpydoc",           # Standardizes scientific docstrings (optional but recommended)
+]
+
 [project.urls]
 "Homepage" = "https://github.com/perturber/SPLIT"

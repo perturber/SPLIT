@@ -123,6 +123,13 @@ SPLIT requires `fastlisaresponse >= 1.2.1a0` for separate `t0`/`t_buffer` argume
 pip install --pre fastlisaresponse-cuda12x==1.2.1a0
 ```
 
+**Installing GPU optional dependencies in one step**  
+After cloning and installing the manually-pinned packages above, install the remaining GPU extras with:
+```bash
+pip install -e ".[gpu]"
+```
+
+
 ---
 
 ### Waveform / Trajectory Issues
