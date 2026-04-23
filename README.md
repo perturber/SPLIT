@@ -6,6 +6,8 @@
   </picture>
 </p>
 
+<!-- docs-start -->
+
 # SPLIT (Sliced Posteriors for Long-Inspiral Trajectories)
 SPLIT is a Python package designed for Semi-Coherent EMRI (Extreme-Mass-Ratio Inspiral) Parameter Estimation on Multi-GPUs.
 

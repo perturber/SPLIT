@@ -29,10 +29,15 @@ extensions = [
 templates_path = ['_templates']
 exclude_patterns = []
 
-
+# Tell MyST to auto-generate anchor links for H1, H2, and H3 headers
+myst_heading_anchors = 3
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+html_logo = '../assets/logos/square-light.svg'
+html_theme_options = {
+    'logo_only': True,
+}

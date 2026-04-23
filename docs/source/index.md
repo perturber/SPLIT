@@ -1,12 +1,7 @@
 ```{include} ../../README.md
-```
-
-```{toctree}
-:maxdepth: 2
-:caption: API Reference
-:hidden:
-
-api_reference
+---
+start-after: <!-- docs-start -->
+---
 ```
 
 ```{toctree}
@@ -16,5 +11,13 @@ api_reference
 
 installation
 quickstart
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: API Reference
+:hidden:
+
+api_reference
 ```
 
