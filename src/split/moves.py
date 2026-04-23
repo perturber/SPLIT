@@ -8,6 +8,15 @@ class SharedState:
 
 #define a global custom move class for probabilistic blocked Gibbs updates of the evolving parameters.
 class BlockedGibbsGaussianMove(MHMove):
+    """Probabilistic Blocked Gibbs sampler with fixed Gaussian proposals.
+    On each step either the static (hyper) branch or one randomly chosen
+    evolving leaf is updated with a multivariate Gaussian kernel.  The branch
+    to update is selected with probability ``prob_hyper`` for the static branch
+    and ``1 - prob_hyper`` for the evolving branch.  Pre-supplied covariance
+    matrices are scaled by the parallel-tempering inverse temperature to
+    preserve detailed balance across temperature levels.
+    """
+
     def __init__(self, cov, prob_hyper=0.5,**kwargs):
         """
         Custom MHmove class for Blocked updates of the evolving parameters (leaves) and the hyper parameters (static branch).
@@ -90,6 +99,14 @@ class BlockedGibbsGaussianMove(MHMove):
 
 # similarly, define a probabilistic blocked stretch move class 
 class BlockedGibbsStretchMove(RedBlueMove):
+    """Probabilistic Blocked Gibbs sampler using affine-invariant stretch proposals.
+    Adapts the Goodman–Weare stretch move (RedBlue ensemble) to the two-branch
+    SPLIT structure.  On each step either the static branch or one randomly chosen
+    evolving leaf is updated via a stretch proposal along the line connecting an
+    active and a complementary walker.  The correct log-factor
+    ``(ndim - 1) * log(z)`` is accumulated for detailed balance.
+    """
+
     def __init__(self, a=2.0, prob_hyper=0.5, **kwargs):
         """
         Custom RedBlue move class for Blocked updates of the evolving parameters (leaves) and the hyper parameters (static branch).
@@ -176,6 +193,14 @@ class BlockedGibbsStretchMove(RedBlueMove):
         return q, factors
     
 class SequentialBlockedGibbsGaussianMove(MHMove):
+    """Deterministic sequential Blocked Gibbs sampler with fixed Gaussian proposals.
+    Cycles through all evolving blocks and the static branch, updating exactly 
+    one block per call.  A ``SharedState`` object keeps the schedule synchronized 
+    when this move is mixed with other sequential moves 
+    (e.g. ``SequentialBlockedGibbsStretchMove``).  The fixed covariance
+    matrices are pre-scaled by the inverse temperature at each step.
+    """
+
     def __init__(self, cov, shared_state=None, **kwargs):
         """
         Custom MHmove class for sequential updates of the
@@ -260,6 +285,14 @@ class SequentialBlockedGibbsGaussianMove(MHMove):
         return q, factors
     
 class SequentialBlockedGibbsStretchMove(RedBlueMove):
+    """Deterministic sequential Blocked Gibbs sampler using affine-invariant stretch proposals.
+    Cycles through all evolving blocks and the static branch.  
+    Both halves of the RedBlue ensemble update the same block within
+    each full iteration (controlled via floor-division on ``SharedState.step``).
+    Compatible with ``SequentialBlockedGibbsGaussianMove`` when both share the
+    same ``SharedState`` instance.
+    """
+
     def __init__(self, a=2.0, shared_state=None, **kwargs):
         """
         Custom RedBlue move class for deterministic, sequential Blocked updates 
@@ -347,6 +380,16 @@ class SequentialBlockedGibbsStretchMove(RedBlueMove):
         return q, factors
     
 class SequentialAdaptiveBlockedGibbsGaussianMove(RedBlueMove):
+    """Deterministic sequential Blocked Gibbs sampler with an adaptive empirical-covariance kernel.
+    Combines sequential block scheduling (via ``SharedState``) with an online
+    covariance estimate built from the complementary walker ensemble.  A burn-in
+    phase uses a heavily compressed scale factor for broad initial exploration,
+    then switches to the theoretically optimal Gelman–Roberts–Gilks scaling
+    ``(2.38^2 / d)`` once ``burn_in_steps`` iterations have elapsed.  A diagonal
+    regularizer ``reg`` prevents covariance collapse during early burn-in when
+    walkers are tightly clustered.
+    """
+
     def __init__(self, mode_factor=None, burn_in_mode_factor=1e-4, burn_in_steps=1000, reg=1e-9, shared_state=None, **kwargs):
         """
         Custom RedBlueMove class for sequential adaptive updates of the

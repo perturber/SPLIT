@@ -6,6 +6,7 @@ import os
 import emcee
 import multiprocessing as mp
 import logging
+from typing import Any, Callable, Dict, List, Optional
 
 # --- Setup SPLIT Logger ---
 logger = logging.getLogger("SPLIT")
@@ -72,9 +73,22 @@ worker_freq_mask = None
 worker_resp_blocks = None
 worker_gpu_id = None
 
-def init_worker(d_fft_cpu, PSD_cpu, freq_mask_cpu, Tobs_block_padded, dt, 
-                Nblocks, slice_length, use_response, wave_gen_func, 
-                tdi_kwargs_base=None,  index_lambda=None, index_beta=None, t_buffer=None):
+def init_worker(
+    d_fft_cpu: np.ndarray,
+    PSD_cpu: np.ndarray,
+    freq_mask_cpu: np.ndarray,
+    Tobs_block_padded: float,
+    dt: float,
+    Nblocks: int,
+    slice_length: int,
+    use_response: bool,
+    wave_gen_func: Any,
+    tdi_kwargs_base: Optional[Dict] = None,
+    index_lambda: Optional[int] = None,
+    index_beta: Optional[int] = None,
+    t_buffer: Optional[float] = None,
+) -> None:
+    
     """
     Initializes the completely isolated environment for each multiprocessing worker.
     Each worker gets its own GPU context, its own copy of the static data on that GPU, and its own set of ResponseWrapper instances built natively on that GPU.
@@ -141,7 +155,7 @@ def init_worker(d_fft_cpu, PSD_cpu, freq_mask_cpu, Tobs_block_padded, dt,
         else:
             worker_resp_blocks.append(worker_wave_gen)
 
-def window_gen_block_worker(*pars, resp_instance, T, dt, slice_length, alpha=0.05):
+def window_gen_block_worker(*pars: Any, resp_instance: Any, T: float, dt: float, slice_length: int, alpha: float = 0.05) -> Any:
     """Generates padded waveform, slices valid middle block, applies Tukey window."""
     a = resp_instance(*pars, T=T, dt=dt)
     a = cp.array(a)
@@ -156,10 +170,22 @@ def window_gen_block_worker(*pars, resp_instance, T, dt, slice_length, alpha=0.0
 
     return a_valid
 
-def log_like_semicoherent(pars_in, Tobs_block_padded, dt, df, slice_length, alpha_block,
-                          len_pars_names, indices_ev_in, indices_static_in,
-                          indices_ev_fixed, indices_static_fixed,
-                          value_fixed_static, value_fixed_ev, nu=10):
+def log_like_semicoherent(
+    pars_in: tuple,
+    Tobs_block_padded: float,
+    dt: float,
+    df: float,
+    slice_length: int,
+    alpha_block: float,
+    len_pars_names: int,
+    indices_ev_in: List[int],
+    indices_static_in: List[int],
+    indices_ev_fixed: List[int],
+    indices_static_fixed: List[int],
+    value_fixed_static: List[float],
+    value_fixed_ev: np.ndarray,
+    nu: float = 10,
+) -> float:
     
     global worker_gpu_id, worker_d_fft, worker_PSD, worker_freq_mask, worker_resp_blocks
     
@@ -232,7 +258,7 @@ class SPLIT:
     """
 
     @property
-    def named_models(self):
+    def named_models(self) -> Dict[str, type]:
         from .customEMRIs.AccEccEqPn5AAK import AccEccEqPn5AAKWaveform
         from .customEMRIs.FastKerrEccentricEquatorialAccretionFlux import FastKerrEccentricEquatorialAccretionFlux
 
@@ -242,7 +268,14 @@ class SPLIT:
             # Add future custom waveform models here.
         }
     
-    def __init__(self, emri_config_path, sample_config_path, out_dir, custom_injection_func=None, custom_analysis_func=None):
+    def __init__(
+        self,
+        emri_config_path: str,
+        sample_config_path: str,
+        out_dir: str,
+        custom_injection_func: Optional[Callable] = None,
+        custom_analysis_func: Optional[Callable] = None,
+    ) -> None:
 
         """
         Initializes the SPLIT pipeline by loading JSON configuration files, mapping 
@@ -370,7 +403,7 @@ class SPLIT:
         )
         self.analysis_traj = dummy_wave_gen.waveform_generator.inspiral_generator
 
-    def generate_injection_data(self):
+    def generate_injection_data(self) -> None:
         """
         Generates the target waveform, scales it to the desired SNR, and processes it 
         for the semi-coherent likelihood.
@@ -551,7 +584,7 @@ class SPLIT:
         self.PSD_masked_xp = self.xp.atleast_2d(self.xp.array(PSD_coarse))[..., freq_mask_xp][:, None, :]
         self.d_fft_masked_xp = (self.emri['dt'] * self.xp.fft.rfft(self.d_slices, axis=-1))[..., 1:][..., freq_mask_xp]
 
-    def build_priors(self):
+    def build_priors(self) -> None:
         """
         Evaluates the physical trajectory and dynamically constructs the Eryn prior bounds.
 
@@ -683,7 +716,7 @@ class SPLIT:
             )
         }
 
-    def run_sampler(self):
+    def run_sampler(self) -> None:
         """
         Configures and executes the Eryn MCMC sampler.
 

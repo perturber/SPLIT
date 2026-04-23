@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Any, Dict, List, Optional
 
 class MarkovStudenttPrior:
     """
@@ -11,11 +12,22 @@ class MarkovStudenttPrior:
     the parameters from block (i-1) using pure GR, and applies a Student-t penalty 
     based on how far the proposed parameters in block (i) deviate from that prediction.
     """
-    def __init__(self, prior_ev, prior_st, dt_block, nu,
-                 sigma_dict, samp_config, emri_config,
-                 all_param_names, true_evolving_dict, 
-                 traj_instance, 
-                 custom_arg_names, analysis_add_args_dict):
+
+    def __init__(
+        self,
+        prior_ev: Any,
+        prior_st: Any,
+        dt_block: float,
+        nu: float,
+        sigma_dict: Dict[str, float],
+        samp_config: Dict,
+        emri_config: Dict,
+        all_param_names: List[str],
+        true_evolving_dict: Dict[str, np.ndarray],
+        traj_instance: Any,
+        custom_arg_names: List[str],
+        analysis_add_args_dict: Dict[str, float],
+    ) -> None:
         """
         Initializes the Student-t Prior.
 
@@ -83,7 +95,13 @@ class MarkovStudenttPrior:
         # Satisfy the Eryn gods
         self.key_order = [0]
 
-    def logpdf(self, coords, inds, supps=None, branch_supps=None):
+    def logpdf(
+        self,
+        coords: Dict[str, np.ndarray],
+        inds: Dict[str, np.ndarray],
+        supps: Optional[Any] = None,
+        branch_supps: Optional[Any] = None,
+    ) -> np.ndarray:
         """
         Evaluates the joint log-prior probability for the entire MCMC ensemble.
 

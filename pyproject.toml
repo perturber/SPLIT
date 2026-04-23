@@ -13,17 +13,21 @@ authors = [
 ]
 dependencies = [
     "numpy>=2.0,<2.4",
-    #"cupy",
-    "matplotlib",
-    "corner",
-    "tqdm",
-    "emcee",
-    "scipy",
-    #"eryn",
-    #"fastlisaresponse-cuda12x",
-    #"fastemriwaveforms-cuda12x",
-    #"lisaanalysistools-cuda12x",
-    #"stableemrifisher"
+    "matplotlib>=3.7",
+    "corner>=2.2",
+    "tqdm>=4.64",
+    "emcee>=3.1",
+    "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "cupy",
+    "eryn",
+    "fastlisaresponse-cuda12x",
+    "fastemriwaveforms-cuda12x",
+    "lisaanalysistools-cuda12x",
+    "stableemrifisher",
 ]
 
 [project.urls]
