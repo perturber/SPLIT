@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logos/github-readme-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="docs/assets/logos/github-readme-light.svg">
-    <img alt="SPLIT: Sliced Posteriors for Long Inspiral Trajectories" src="docs/assets/logos/github-readme-light.svg" width="60%">
+    <img alt="SPLIT: Sliced Posteriors for Long Inspiral Trajectories" src="docs/assets/logos/github-readme-light.svg" width="98%">
   </picture>
 </p>
 
