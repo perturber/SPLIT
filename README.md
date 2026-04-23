@@ -98,41 +98,49 @@ Ensure your CUDA drivers are compatible with CUDA 12.x. Verify with:
 nvidia-smi
 nvcc --version
 ```
+
 **`cupy.cuda.runtime.CUDARuntimeError: cudaErrorNoDevice`**  
 No GPU was detected. SPLIT requires at least one NVIDIA GPU. Confirm with `nvidia-smi`.
+
 **`OutOfMemoryError` during `run_sampler`**  
 Each worker process allocates GPU memory for waveform generation and data arrays. Try reducing the number of blocks (`Nblocks` in `emri_config.json`) or the number of walkers (`nwalkers` in `sample_config.json`).
+
 ---
+
 ### Dependency Issues
 **`ImportError: No module named 'eryn'`**  
 Install the patched Eryn fork required by SPLIT:
 ```bash
 pip install git+https://github.com/perturber/Eryn.git@main
 ```
+
 **`AttributeError: 'HDFBackend' object has no attribute 'key_order'`**  
 You have the upstream `eryn` installed instead of the patched fork. See [A Note on Dependencies](#a-note-on-dependecies).
+
 **`fastlisaresponse` version mismatch**  
 SPLIT requires `fastlisaresponse >= 1.2.1a0` for separate `t0`/`t_buffer` arguments:
 ```bash
 pip install --pre fastlisaresponse-cuda12x==1.2.1a0
 ```
-**Installing GPU optional dependencies in one step**  
-After cloning and installing the manually-pinned packages above, install the remaining GPU extras with:
-```bash
-pip install -e ".[gpu]"
-```
+
 ---
+
 ### Waveform / Trajectory Issues
 **Sampler produces `-inf` log-likelihood for all walkers**
 - Check that `fmin`/`fmax` in `emri_config.json` are within the signal's frequency range.
 - Verify `Nblocks` is not so large that individual blocks are shorter than one orbital cycle.
 - Ensure `p0`, `e0`, and `a` satisfy the separatrix condition for the chosen spin value.
+
 **Custom waveform model not found**  
 Pass it directly via `custom_injection_func` / `custom_analysis_func` arguments to `SPLIT`, or register it in the `named_models` property in `split.py`.
+
 ---
+
 ### MCMC / Convergence Issues
+
 **Walkers initialized outside prior bounds**  
 Reduce `jitter` in `sample_config.json` or tighten the prior bounds via the `custom_bounds` key.
+
 **Sampler never converges**
 - Increase `nsteps` or `nwalkers` (minimum recommended: `4 × ndim`).
 - Tune `sigma_prior` tolerances in `emri_config.json` — values that are too tight trap walkers near the true solution.
