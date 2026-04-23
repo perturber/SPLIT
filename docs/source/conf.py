@@ -1,7 +1,7 @@
 import os
 import sys
 # Point to your src directory so autodoc can find the 'split' package
-sys.path.insert(0, os.path.abspath('../../src'))
+sys.path.insert(0, os.path.abspath('../../src/split'))
 
 # Configuration file for the Sphinx documentation builder.
 #

@@ -31,8 +31,11 @@ class BlockedGibbsGaussianMove(MHMove):
     def get_proposal(self, branches_coords, random, branches_inds=None, **kwargs):
         """
         Generate the proposed state.
-        branches_coords: dict with keys as branch names.
-                         Values are (ntemps, nwalkers, nleaves_max, ndim)
+
+        Args:
+            branches_coords (dict): Keys are branch names. 
+                Values are arrays of shape (ntemps, nwalkers, nleaves_max, ndim).
+            random: Random number generator instance.
         """
         q = {}
 
@@ -120,10 +123,13 @@ class BlockedGibbsStretchMove(RedBlueMove):
     
     def get_proposal(self, s_all, c_all, random, **kwargs):
         """
-        s_all (dict): Keys are ``branch_names`` and values are coordinates
-            for which a proposal is to be generated.
-        c_all (dict): Keys are ``branch_names`` and values are lists. These
-            lists contain all the complement array values.
+        Generate the proposal.
+
+        Args:
+            s_all (dict): Keys are ``branch_names`` and values are coordinates
+                for which a proposal is to be generated.
+            c_all (dict): Keys are ``branch_names`` and values are lists. These
+                lists contain all the complement array values.
 
         Notes:
             self.xp comes from the parent RedBlueMove class.    
