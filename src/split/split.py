@@ -768,6 +768,9 @@ class SPLIT:
 
         # Add the exact slice_length calculated during injection generation
         self.samp['slice_length'] = int(self.slice_length)
+
+        # Add the prior bounds on all modeled parameters
+        self.samp['prior_bounds'] = self.bounds_dict
         
         with open(updated_samp_path, 'w') as f:
             json.dump(self.samp, f, indent=4)
