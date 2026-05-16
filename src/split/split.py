@@ -686,12 +686,12 @@ class SPLIT:
         sigma_dict = self.emri.get(
             'sigma_prior', 
             {
-            "p0": 1e-4,
-            "e0": 1e-5,
-            "xI0": 1e-5,
-            "Phi_phi0": 0.5,
-            "Phi_theta0": 0.5,
-            "Phi_r0": 0.5
+            "p0": 1e-2,
+            "e0": 1e-3,
+            "xI0": 1e-3,
+            "Phi_phi0": 1.0,
+            "Phi_theta0": 1.0,
+            "Phi_r0": 1.0
             }
         )
 
