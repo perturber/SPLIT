@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use SPLIT in your research, please cite it using the metadata below."
+title: "SPLIT - Sliced Posteriors for Long-Inspiral Trajectories"
+type: software
+authors:
+  - family-names: Kejriwal
+    given-names: Shubham
+version: v0.0.1alpha
+date-released: "2026-05-19"
+doi: 10.5281/zenodo.20290209
+url: "https://doi.org/10.5281/zenodo.20290209"
+repository-code: "https://github.com/perturber/SPLIT"
+license: MIT

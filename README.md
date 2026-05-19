@@ -192,7 +192,10 @@ Reduce `jitter` in `sample_config.json` or tighten the prior bounds via the `cus
 If you use SPLIT in your research, please cite it via its Zenodo DOI:
 [10.5281/zenodo.20290209](https://doi.org/10.5281/zenodo.20290209).
 
-A ready-to-use BibTeX entry is provided in [`CITATION.md`](CITATION.md).
+Citation metadata is provided in machine-readable form in
+[`CITATION.cff`](CITATION.cff); GitHub renders this as a
+**"Cite this repository"** button in the repo sidebar, with BibTeX
+and APA exports available with one click.
 
 ## License
 
