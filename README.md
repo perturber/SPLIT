@@ -10,6 +10,7 @@
   <a href="https://www.python.org/downloads/"><img alt="Python" src="https://img.shields.io/badge/python-%E2%89%A53.9-blue"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green"></a>
   <a href="https://github.com/perturber/SPLIT"><img alt="Status" src="https://img.shields.io/badge/status-alpha-orange"></a>
+  <a href="https://doi.org/10.5281/zenodo.20290209"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.20290209.svg"></a>
 </p>
 
 <!-- docs-start -->
@@ -185,6 +186,13 @@ Reduce `jitter` in `sample_config.json` or tighten the prior bounds via the `cus
 - Tune `sigma_prior` tolerances in `emri_config.json` — values that are too tight trap walkers near the true solution.
 - Use a dedicated `burn` phase first to let the adaptive moves (`BlockAdaptGaussian`) tune their covariance before the main run.
 <!-- troubleshooting-end -->
+
+## Citation
+
+If you use SPLIT in your research, please cite it via its Zenodo DOI:
+[10.5281/zenodo.20290209](https://doi.org/10.5281/zenodo.20290209).
+
+A ready-to-use BibTeX entry is provided in [`CITATION.md`](CITATION.md).
 
 ## License
 
