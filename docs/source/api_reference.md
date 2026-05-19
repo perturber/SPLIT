@@ -1,12 +1,11 @@
 # API Reference
 
-Here you will find the detailed technical documentation for the SPLIT pipeline's modules.
+Detailed technical documentation for the SPLIT pipeline's modules. Only names with docstrings are listed; private helpers are intentionally omitted.
 
 ## SPLIT Core (`split.split`)
 ```{eval-rst}
 .. automodule:: split.split
    :members:
-   :undoc-members:
    :show-inheritance:
 ```
 
@@ -14,7 +13,6 @@ Here you will find the detailed technical documentation for the SPLIT pipeline's
 ```{eval-rst}
 .. automodule:: split.moves
    :members:
-   :undoc-members:
    :show-inheritance:
 ```
 
@@ -22,7 +20,6 @@ Here you will find the detailed technical documentation for the SPLIT pipeline's
 ```{eval-rst}
 .. automodule:: split.priors
    :members:
-   :undoc-members:
    :show-inheritance:
 ```
 
@@ -30,7 +27,6 @@ Here you will find the detailed technical documentation for the SPLIT pipeline's
 ```{eval-rst}
 .. automodule:: split.diagnostics
    :members:
-   :undoc-members:
    :show-inheritance:
 ```
 
@@ -38,7 +34,6 @@ Here you will find the detailed technical documentation for the SPLIT pipeline's
 ```{eval-rst}
 .. automodule:: split.utils
    :members:
-   :undoc-members:
    :show-inheritance:
 ```
 
@@ -46,6 +41,5 @@ Here you will find the detailed technical documentation for the SPLIT pipeline's
 ```{eval-rst}
 .. automodule:: split.customEMRIs
    :members:
-   :undoc-members:
    :show-inheritance:
 ```

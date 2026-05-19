@@ -1,20 +1,16 @@
 # Quickstart
 
-1. After installation, you can run SPLIT using the `python -m` flag
-   ```bash
-   python -m split
-   # or explicitly call the execution file
-   python run_job.py
+```{include} ../../README.md
+:start-after: <!-- quickstart-start -->
+:end-before: <!-- quickstart-end -->
+```
 
-2. You can specify custom configuration files and a custom output directory using command-line flags:
-   ```bash
-   # using the python -m flag
-   python -m split --emri emri_config.json --samp sample_config.json --out SPLIT_Outputs
-   # or explicitly
-   python run_job.py --emri emri_config.json --samp sample_config.json --out SPLIT_Outputs
+## Outputs
 
-3. View all available command-line options and their descriptions using the help flag:
-   ```bash
-   python -m split -h
-   
-4. To run a fully-coherent analysis, simply set `'Nblocks': 1` in `emri_config.json`.
+By default, a SPLIT run writes the following into the directory specified by `--out` (default: `SPLIT_Outputs/`):
+
+- An Eryn HDF5 backend file containing the full chain, log-probabilities, and acceptance statistics.
+- Diagnostic plots for the block-level evolving parameters, static parameters, and the joint parameter set projected at `t=0`.
+- A copy of the resolved `emri_config.json` and `sample_config.json` used for the run, for reproducibility.
+
+Resume a previous run by setting `old_filename` (and a new `new_filename`) in `sample_config.json`.
