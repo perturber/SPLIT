@@ -10,6 +10,7 @@
   <a href="https://www.python.org/downloads/"><img alt="Python" src="https://img.shields.io/badge/python-%E2%89%A53.9-blue"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green"></a>
   <a href="https://github.com/perturber/SPLIT"><img alt="Status" src="https://img.shields.io/badge/status-alpha-orange"></a>
+  <a href="https://doi.org/10.5281/zenodo.20290209"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.20290209.svg"></a>
 </p>
 
 <!-- docs-start -->
@@ -185,6 +186,33 @@ Reduce `jitter` in `sample_config.json` or tighten the prior bounds via the `cus
 - Tune `sigma_prior` tolerances in `emri_config.json` — values that are too tight trap walkers near the true solution.
 - Use a dedicated `burn` phase first to let the adaptive moves (`BlockAdaptGaussian`) tune their covariance before the main run.
 <!-- troubleshooting-end -->
+
+## Citation
+
+If you use SPLIT in your research, please cite it via its Zenodo DOI:
+[10.5281/zenodo.20290209](https://doi.org/10.5281/zenodo.20290209).
+
+A ready-to-use BibTeX entry:
+
+```bibtex
+@software{kejriwal_2026_20290209,
+  author       = {Kejriwal, Shubham},
+  title        = {SPLIT - Sliced Posteriors for Long-Inspiral
+                   Trajectories
+                  },
+  month        = may,
+  year         = 2026,
+  publisher    = {Zenodo},
+  version      = {v0.0.1alpha},
+  doi          = {10.5281/zenodo.20290209},
+  url          = {https://doi.org/10.5281/zenodo.20290209},
+}
+```
+
+The same metadata is also provided in machine-readable form in
+[`CITATION.cff`](CITATION.cff); GitHub renders this as a
+**"Cite this repository"** button in the repo sidebar, with BibTeX
+and APA exports available with one click.
 
 ## License
 
