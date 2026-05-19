@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres (best-effort) to [PEP 440](https://peps.python.org/pep-0440/)
 versioning.
 
-## [0.0.1alpha] - 2026-05-19
+## [v0.0.1alpha] - 2026-05-19
 
 First public alpha of SPLIT — Sliced Posteriors for Long-Inspiral Trajectories.
 
@@ -32,4 +32,4 @@ First public alpha of SPLIT — Sliced Posteriors for Long-Inspiral Trajectories
   `fastlisaresponse-cuda12x`, `lisaanalysistools-cuda12x`, and
   `FastEMRIWaveforms` — see the README for installation details.
 
-[0.0.1alpha]: https://github.com/perturber/SPLIT/releases/tag/v0.0.1alpha
+[v0.0.1alpha]: https://github.com/perturber/SPLIT/releases/tag/v0.0.1alpha
