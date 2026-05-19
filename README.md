@@ -101,7 +101,7 @@ The SPLIT orchestrator runs by ingesting two distinct JSON configuration files:
    * Assigns the set of fixed evolving parameters through `fixed_evolving` and automatically assigns any remaining model parameters to `fixed_static`.
    * Configures Eryn's `EnsembleSampler` method with `nwalkers`, `ntemps`, `nsteps`, probability thresholds for the custom moves, etc. Allows for dynamically linked resuming output chains via `new_filename`/`old_filename`.
 
-See [`emri_config.json`](emri_config.json) and [`sample_config.json`](sample_config.json) for working examples.
+See [`emri_config.json`](https://github.com/perturber/SPLIT/blob/main/emri_config.json) and [`sample_config.json`](https://github.com/perturber/SPLIT/blob/main/sample_config.json) for working examples.
 <!-- configuration-end -->
 
 <!-- quickstart-start -->
@@ -157,7 +157,7 @@ pip install git+https://github.com/perturber/Eryn.git@main
 ```
 
 **`AttributeError: 'HDFBackend' object has no attribute 'key_order'`**
-You have the upstream `eryn` installed instead of the patched fork. See [A Note on Dependencies](#a-note-on-dependencies).
+You have the upstream `eryn` installed instead of the patched fork. See [A Note on Dependencies](https://github.com/perturber/SPLIT#a-note-on-dependencies).
 
 **`fastlisaresponse` version mismatch**
 SPLIT requires `fastlisaresponse >= 1.2.1a0` for separate `t0`/`t_buffer` arguments:
