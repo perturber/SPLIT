@@ -1,14 +1,11 @@
 # Installation
 
-Currently, SPLIT is available by building from the source. 
-
-```bash
-git clone [https://github.com/perturber/SPLIT.git](https://github.com/perturber/SPLIT.git)
-cd SPLIT
-pip install .
+```{include} ../../README.md
+:start-after: <!-- installation-start -->
+:end-before: <!-- installation-end -->
 ```
 
-To install with GPU support for `FastEMRIWaveforms` and `Eryn`:
-```bash
-pip install .[gpu]
-```  
+```{include} ../../README.md
+:start-after: <!-- dependencies-start -->
+:end-before: <!-- dependencies-end -->
+```

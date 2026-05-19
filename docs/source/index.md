@@ -1,7 +1,6 @@
 ```{include} ../../README.md
----
-start-after: <!-- docs-start -->
----
+:start-after: <!-- docs-start -->
+:end-before: <!-- docs-end -->
 ```
 
 ```{toctree}
@@ -10,7 +9,18 @@ start-after: <!-- docs-start -->
 :hidden:
 
 installation
+configuration
 quickstart
+troubleshooting
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: Developer Guide
+:hidden:
+
+contributing
+changelog
 ```
 
 ```{toctree}
@@ -20,4 +30,3 @@ quickstart
 
 api_reference
 ```
-
