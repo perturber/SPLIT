@@ -203,7 +203,6 @@ A ready-to-use BibTeX entry:
   month        = may,
   year         = 2026,
   publisher    = {Zenodo},
-  version      = {v0.0.1alpha},
   doi          = {10.5281/zenodo.20290209},
   url          = {https://doi.org/10.5281/zenodo.20290209},
 }
