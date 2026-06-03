@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logos/github-readme-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="docs/assets/logos/github-readme-light.svg">
-    <img alt="SPLIT: Sliced Posteriors for Long Inspiral Trajectories" src="docs/assets/logos/github-readme-light.svg" width="98%">
+    <img alt="SPLIT: Semi-coherent Posteriors for Long Inspiral Templates" src="docs/assets/logos/github-readme-light.svg" width="98%">
   </picture>
 </p>
 
@@ -14,7 +14,7 @@
 
 <!-- docs-start -->
 
-# SPLIT (Sliced Posteriors for Long-Inspiral Trajectories)
+# SPLIT (Semi-coherent Posteriors for Long-Inspiral Templates)
 
 SPLIT is a Python package designed for Semi-Coherent EMRI (Extreme-Mass-Ratio Inspiral) Parameter Estimation on Multi-GPUs.
 

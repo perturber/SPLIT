@@ -246,7 +246,7 @@ def log_like_semicoherent(
 
 class SPLIT:
     """
-    Sliced Posteriors for Long-Inspiral Trajectories (SPLIT).
+    Semi-coherent Posteriors for Long-Inspiral Templates (SPLIT).
 
     An orchestrator class designed to manage semi-coherent Bayesian parameter 
     estimation for Extreme-Mass-Ratio Inspirals (EMRIs) across multi-GPU hardware. 
