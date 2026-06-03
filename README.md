@@ -197,8 +197,8 @@ A ready-to-use BibTeX entry:
 ```bibtex
 @software{kejriwal_2026_20290209,
   author       = {Kejriwal, Shubham},
-  title        = {SPLIT - Sliced Posteriors for Long-Inspiral
-                   Trajectories
+  title        = {SPLIT - Semi-coherent Posteriors for Long-Inspiral
+                   Templates
                   },
   month        = may,
   year         = 2026,
