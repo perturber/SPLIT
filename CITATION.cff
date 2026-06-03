@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use SPLIT in your research, please cite it using the metadata below."
-title: "SPLIT - Sliced Posteriors for Long-Inspiral Trajectories"
+title: "SPLIT - Semi-coherent Posteriors for Long-Inspiral Templates"
 type: software
 authors:
   - family-names: Kejriwal
