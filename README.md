@@ -11,6 +11,7 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green"></a>
   <a href="https://github.com/perturber/SPLIT"><img alt="Status" src="https://img.shields.io/badge/status-alpha-orange"></a>
   <a href="https://doi.org/10.5281/zenodo.20290209"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.20290209.svg"></a>
+  <a href="https://semi-coherent-posteriors-for-long-inspiral-templates.readthedocs.io/en/stable/"><img alt="Documentation" src="https://img.shields.io/badge/docs-stable-blue"></a>
 </p>
 
 <!-- docs-start -->
