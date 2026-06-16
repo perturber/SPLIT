@@ -21,6 +21,8 @@ SPLIT is a Python package designed for Semi-Coherent EMRI (Extreme-Mass-Ratio In
 
 SPLIT exploits the physical hierarchy of the system by decomposing the parameter space into **static** and **evolving** parameters to construct a natural semi-coherent inference framework. The primary motivation for this hierarchical approach is to ensure robustness against non-stationarities in the detector data and potential waveform modeling inaccuracies. In purely coherent inference, these effects accumulate over the long inspiral duration, leading to severe signal dephasing and strong parameter biases. SPLIT mitigates this by slicing the data into `Nblocks` blocks and inferring the joint parameter space semi-coherently with a more forgiving joint prior and likelihood across all blocks.
 
+Full documentation is available at [semi-coherent-posteriors-for-long-inspiral-templates.readthedocs.io](https://semi-coherent-posteriors-for-long-inspiral-templates.readthedocs.io/en/stable/).
+
 If you use any part of this repository in your work, please cite the [paper](https://arxiv.org/abs/2606.13728) and the [repository](https://github.com/perturber/SPLIT). See the [Citation](#citation) section below for the preferred citation.
 
 <!-- features-start -->
