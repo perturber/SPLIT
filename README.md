@@ -189,12 +189,24 @@ Reduce `jitter` in `sample_config.json` or tighten the prior bounds via the `cus
 
 ## Citation
 
-If you use SPLIT in your research, please cite it via its Zenodo DOI:
-[10.5281/zenodo.20290209](https://doi.org/10.5281/zenodo.20290209).
+If you use SPLIT in your research, please cite both the companion paper
+([arXiv:2606.13728](https://arxiv.org/abs/2606.13728)) and the software
+via its Zenodo DOI
+([10.5281/zenodo.20290209](https://doi.org/10.5281/zenodo.20290209)).
 
-A ready-to-use BibTeX entry:
+Ready-to-use BibTeX entries:
 
 ```bibtex
+@article{Kejriwal:2026xut,
+    author = "Kejriwal, Shubham",
+    title = "{SPLIT: a robust semi-coherent inference pipeline for long-inspiral gravitational-wave sources}",
+    eprint = "2606.13728",
+    archivePrefix = "arXiv",
+    primaryClass = "gr-qc",
+    month = "6",
+    year = "2026"
+}
+
 @software{kejriwal_2026_20290209,
   author       = {Kejriwal, Shubham},
   title        = {SPLIT - Semi-coherent Posteriors for Long-Inspiral
