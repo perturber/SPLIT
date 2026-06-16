@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres (best-effort) to [PEP 440](https://peps.python.org/pep-0440/)
 versioning.
 
-## [v0.0.1alpha] - 2026-05-19
+## [v0.0.1] - 2026-05-19
 
 First public alpha of SPLIT — Sliced Posteriors for Long-Inspiral Trajectories.
 
