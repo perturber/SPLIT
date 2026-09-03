@@ -248,7 +248,7 @@ class SPLIT:
     """
     Segmented Posteriors for Long-Inspiral Templates (SPLIT).
 
-    An orchestrator class designed to manage semi-coherent Bayesian parameter 
+    An orchestrator class designed to manage loosely-coherent Bayesian parameter
     estimation for Extreme-Mass-Ratio Inspirals (EMRIs) across multi-GPU hardware. 
     It seamlessly handles the loading of user configurations, the generation and 
     slicing of injected waveform data (including custom/non-Kerr waveforms), prior 
@@ -406,7 +406,7 @@ class SPLIT:
     def generate_injection_data(self) -> None:
         """
         Generates the target waveform, scales it to the desired SNR, and processes it 
-        for the semi-coherent likelihood.
+        for the loosely-coherent likelihood.
 
         This method handles:
         1. Injecting either standard Kerr or custom modified waveforms.
