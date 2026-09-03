@@ -11,7 +11,7 @@ versioning.
 First public alpha of SPLIT — Sliced Posteriors for Long-Inspiral Trajectories.
 
 ### Added
-- Multi-GPU semi-coherent EMRI parameter-estimation pipeline (`split.split.SPLIT`).
+- Multi-GPU loosely-coherent EMRI parameter-estimation pipeline (`split.split.SPLIT`).
 - Custom Eryn moves: `SequentialAdaptiveBlockedGibbsGaussianMove` and
   `SequentialBlockedGibbsStretchMove` (`split.moves`).
 - Markovian Student-t transition prior across blocks (`split.priors`).
