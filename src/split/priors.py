@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional
 class MarkovStudenttPrior:
     """
     Custom Eryn Prior evaluating a heavy-tailed Student-t transition penalty 
-    for semi-coherent EMRI blocks against theoretical vacuum-GR trajectories.
-    
-    This class bypasses the assumption that semi-coherent blocks are fully 
+    for loosely-coherent EMRI blocks against theoretical vacuum-GR trajectories.
+
+    This class bypasses the assumption that loosely-coherent blocks are fully
     independent. It applies a base prior (uniform) to 
     all blocks, and then evaluates a Markovian transition penalty: it forward-evolves 
     the parameters from block (i-1) using pure GR, and applies a Student-t penalty 
@@ -39,7 +39,7 @@ class MarkovStudenttPrior:
         prior_st : eryn.prior.ProbDistContainer
             The base prior bounds for the static parameters.
         dt_block : float
-            The physical duration of a single semi-coherent block, in years. 
+            The physical duration of a single loosely-coherent block, in years.
             Used as the time step to forward-evolve the trajectory.
         nu : float
             Degrees of freedom for the heavy-tailed Student-t distribution. 

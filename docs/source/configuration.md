@@ -18,7 +18,7 @@
 | `qK`, `phiK` | float | Spin-orientation polar angles (radians). |
 | `Phi_phi0`, `Phi_r0`, `Phi_theta0` | float | Initial orbital phases. |
 | `T` | float | Total observation time (years). |
-| `Nblocks` | int | Number of semi-coherent blocks. Set to `1` for a fully coherent analysis. |
+| `Nblocks` | int | Number of loosely-coherent blocks. Set to `1` for a fully coherent analysis. |
 | `dt` | float | Sampling cadence (seconds). |
 | `fmin`, `fmax` | float | Frequency-band edges used for likelihood (Hz). |
 | `SNR_target` | float | Target network SNR; the injection is rescaled to match. |

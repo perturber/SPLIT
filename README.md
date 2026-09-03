@@ -11,18 +11,18 @@
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green"></a>
   <a href="https://github.com/perturber/SPLIT"><img alt="Status" src="https://img.shields.io/badge/status-alpha-orange"></a>
   <a href="https://doi.org/10.5281/zenodo.20290209"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.20290209.svg"></a>
-  <a href="https://semi-coherent-posteriors-for-long-inspiral-templates.readthedocs.io/en/stable/"><img alt="Documentation" src="https://img.shields.io/badge/docs-stable-blue"></a>
+  <a href="https://segmented-posteriors-for-long-inspiral-templates.readthedocs.io/en/stable/"><img alt="Documentation" src="https://img.shields.io/badge/docs-stable-blue"></a>
 </p>
 
 <!-- docs-start -->
 
 # SPLIT (Segmented Posteriors for Long-Inspiral Templates)
 
-SPLIT is a Python package designed for Semi-Coherent EMRI (Extreme-Mass-Ratio Inspiral) Parameter Estimation on Multi-GPUs.
+SPLIT is a Python package designed for Loosely-Coherent EMRI (Extreme-Mass-Ratio Inspiral) Parameter Estimation on Multi-GPUs.
 
-SPLIT exploits the physical hierarchy of the system by decomposing the parameter space into **static** and **evolving** parameters to construct a natural semi-coherent inference framework. The primary motivation for this hierarchical approach is to ensure robustness against non-stationarities in the detector data and potential waveform modeling inaccuracies. In purely coherent inference, these effects accumulate over the long inspiral duration, leading to severe signal dephasing and strong parameter biases. SPLIT mitigates this by slicing the data into `Nblocks` blocks and inferring the joint parameter space semi-coherently with a more forgiving joint prior and likelihood across all blocks.
+SPLIT exploits the physical hierarchy of the system by decomposing the parameter space into **static** and **evolving** parameters to construct a natural loosely-coherent inference framework. The primary motivation for this hierarchical approach is to ensure robustness against non-stationarities in the detector data and potential waveform modeling inaccuracies. In purely coherent inference, these effects accumulate over the long inspiral duration, leading to severe signal dephasing and strong parameter biases. SPLIT mitigates this by slicing the data into `Nblocks` blocks and inferring the joint parameter space loosely-coherently with a more forgiving joint prior and likelihood across all blocks.
 
-Full documentation is available at [semi-coherent-posteriors-for-long-inspiral-templates.readthedocs.io](https://semi-coherent-posteriors-for-long-inspiral-templates.readthedocs.io/en/stable/).
+Full documentation is available at [segmented-posteriors-for-long-inspiral-templates.readthedocs.io](https://segmented-posteriors-for-long-inspiral-templates.readthedocs.io/en/stable/).
 
 If you use any part of this repository in your work, please cite the [paper](https://arxiv.org/abs/2606.13728) and the [repository](https://github.com/perturber/SPLIT). See the [Citation](#citation) section below for the preferred citation.
 
@@ -30,7 +30,7 @@ If you use any part of this repository in your work, please cite the [paper](htt
 ## Features
 
 * **Multi-GPU Orchestration**: Utilizes CuPy and the `multiprocessing` library to distribute parallel likelihood evaluations across dedicated GPUs.
-* **Eryn MCMC Sampler**: Hosts the core inference pipeline, natively utilizing Eryn's "branches" (enabling static vs. evolving parameter decomposition) and "leaves" (handling multiple independent blocks), which significantly simplifies the semi-coherent inference architecture.
+* **Eryn MCMC Sampler**: Hosts the core inference pipeline, natively utilizing Eryn's "branches" (enabling static vs. evolving parameter decomposition) and "leaves" (handling multiple independent blocks), which significantly simplifies the loosely-coherent inference architecture.
 * **Custom MCMC Moves**: Implements customized block updating moves like `SequentialAdaptiveBlockedGibbsGaussianMove` and `SequentialBlockedGibbsStretchMove` to efficiently search the "static" and "evolving" parameter branches.
 * **Markovian Student-t Prior**: A heavy-tailed Student-t transition probability between consecutive blocks, penalizing excessive deviations from theoretical vacuum-GR trajectories, but still allowing flexibility to account for genuine waveform inaccuracies.
 * **Student-t Block Likelihood**: A block-independent heavy-tailed Student-t likelihood for robustness against non-stationarities in the data such as noise glitches.
