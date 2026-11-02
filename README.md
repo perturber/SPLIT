@@ -204,7 +204,9 @@ Ready-to-use BibTeX entries:
 ```bibtex
 @article{Kejriwal:2026xut,
     author = "Kejriwal, Shubham",
-    title = "{SPLIT: Loosely-coherent inference of long-inspiral gravitational-wave sources for robustness against modeling and data outliers}",
+    title = "{SPLIT: Loosely-coherent inference of long-inspiral
+                  gravitational-wave sources for robustness against
+                  modeling and data outliers}",
     eprint = "2606.13728",
     archivePrefix = "arXiv",
     primaryClass = "gr-qc",
