@@ -13,14 +13,21 @@ repository-code: "https://github.com/perturber/SPLIT"
 license: MIT
 preferred-citation:
   type: article
-  title: "SPLIT: a robust semi-coherent inference pipeline for long-inspiral gravitational-wave sources"
+  title: "Loosely-coherent inference of long-inspiral gravitational-wave sources for robustness against modeling and data outliers"
   authors:
     - family-names: Kejriwal
       given-names: Shubham
+  journal: "Phys. Rev. D"
+  volume: 114
+  issue: 10
+  start: 104028
   year: 2026
-  month: 6
+  doi: 10.1103/w643-mr38
   identifiers:
+    - type: doi
+      value: 10.1103/w643-mr38
+      description: Published article (Phys. Rev. D)
     - type: other
       value: "arXiv:2606.13728"
-      description: arXiv preprint
-  url: "https://arxiv.org/abs/2606.13728"
+      description: arXiv preprint (gr-qc)
+  url: "https://doi.org/10.1103/w643-mr38"
