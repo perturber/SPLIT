@@ -204,13 +204,15 @@ Ready-to-use BibTeX entries:
 ```bibtex
 @article{Kejriwal:2026xut,
     author = "Kejriwal, Shubham",
-    title = "{SPLIT: Loosely-coherent inference of long-inspiral
-                  gravitational-wave sources for robustness against
-                  modeling and data outliers}",
+    title = "{Loosely-coherent inference of long-inspiral gravitational-wave sources for robustness against modeling and data outliers}",
     eprint = "2606.13728",
     archivePrefix = "arXiv",
     primaryClass = "gr-qc",
-    month = "6",
+    doi = "10.1103/w643-mr38",
+    journal = "Phys. Rev. D",
+    volume = "114",
+    number = "10",
+    pages = "104028",
     year = "2026"
 }
 
